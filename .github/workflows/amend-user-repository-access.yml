@@ -1,0 +1,23 @@
+name: Amend users access to a repository
+
+on:
+  workflow_dispatch:
+  # schedule:
+  #   # At the end of every day
+  #   - cron: "0 6 * * *"
+
+jobs:
+  remove-duplicated-access:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v4
+        with:
+          python-version: "3.10"
+          architecture: "x64"
+          cache: "pip"
+      - run: python3 -m pip install -r scripts/python/requirements.txt
+      - run: python3 scripts/python/amend-user-repository-access.py ${{ secrets.OPERATIONS_ENGINEERING }} > output.txt
+      - uses: actions/upload-artifact@v3
+        with:
+          path: output.txt
