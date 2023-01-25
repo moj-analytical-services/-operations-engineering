@@ -567,14 +567,14 @@ def remove_user_from_repository(user_name, repository_name):
         gh = Github(oauth_token)
         repo = gh.get_repo(MINISTRYOFJUSTICE + repository_name)
         repo.remove_from_collaborators(user_name)
+        # Delay for GH API
+        time.sleep(5)
         print(
             "Removing the user "
             + user_name
             + " from the repository: "
             + repository_name
         )
-        # Delay for GH API
-        time.sleep(10)
     except Exception:
         message = (
             "Warning: Exception in removing a user "
@@ -605,7 +605,9 @@ def create_an_issue(user_name, repository_name):
                 assignee=user_name,
             )
             # Delay for GH API
-            time.sleep(10)
+            time.sleep(5)
+            print("Creating an issue: User access removed, access is now via a team " +
+                  user_name + " in " + repository_name)
         except Exception:
             message = (
                 "Warning: Exception in creating an issue for user "
@@ -622,7 +624,6 @@ def close_expired_issues(repository_name):
     Args:
         repository_name (string): The name of the repository
     """
-
     try:
         gh = Github(oauth_token)
         repo = gh.get_repo(MINISTRYOFJUSTICE + repository_name)
@@ -640,7 +641,8 @@ def close_expired_issues(repository_name):
                     # Close issue
                     issue.edit(state="closed")
                     # Delay for GH API
-                    time.sleep(10)
+                    time.sleep(5)
+                    print("Closing issue in " + repository_name)
     except Exception:
         message = (
             "Warning: Exception in closing issue in the repository: " + repository_name
@@ -746,9 +748,9 @@ def remove_user_from_team(team_id, username):
         gh_team = org.get_team(team_id)
         user = gh.get_user(username)
         gh_team.remove_membership(user)
-        print("Remove user " + username + " from team " + team_id.__str__())
         # Delay for GH API
-        time.sleep(10)
+        time.sleep(5)
+        print("Remove user " + username + " from team " + team_id.__str__())
     except Exception:
         message = (
             "Warning: Exception in removing user "
@@ -772,9 +774,9 @@ def add_user_to_team(team_id, username):
         gh_team = org.get_team(team_id)
         user = gh.get_user(username)
         gh_team.add_membership(user)
-        print("Add user " + username + " to team " + team_id.__str__())
         # Delay for GH API
-        time.sleep(10)
+        time.sleep(5)
+        print("Add user " + username + " to team " + team_id.__str__())
     except Exception:
         message = (
             "Warning: Exception in adding user "
@@ -804,7 +806,8 @@ def create_new_team_with_repository(repository_name, team_name):
             "Automated generated team to grant users access to this repository",
         )
         # Delay for GH API
-        time.sleep(10)
+        time.sleep(5)
+        print("Creating new team " + team_name)
     except Exception:
         message = "Warning: Exception in creating a team " + team_name
         print_stack_trace(message)
@@ -858,7 +861,8 @@ def change_team_repository_permission(repository_name, team_name, team_id, permi
         gh_team = org.get_team(team_id)
         gh_team.update_team_repository(repo, permission)
         # Delay for GH API
-        time.sleep(10)
+        time.sleep(5)
+        print("Change team " + team_name + " repo permission to " + permission)
     except Exception:
         message = (
             "Warning: Exception in changing team "
@@ -871,11 +875,14 @@ def change_team_repository_permission(repository_name, team_name, team_id, permi
 
 def correct_team_name(team_name):
     """GH team names use a slug name. This
-    cannot have a full dot or space in them
-    replace with a -
+    swaps ., _, , with a - and lower cases
+    the team name
 
     Args:
         team_name (string): the name of the team
+
+    Returns:
+        string: converted team name
     """
     new_team_name = ""
     if team_name.startswith("."):
@@ -885,8 +892,9 @@ def correct_team_name(team_name):
         return new_team_name
     else:
         temp_name = team_name.replace(".", "-")
+        temp_name = temp_name.replace("_", "-")
         new_team_name = temp_name.replace(" ", "-")
-    return new_team_name
+    return new_team_name.lower()
 
 
 def put_user_into_existing_team(
