@@ -75,7 +75,7 @@ moj_gh = MojGithub(org=organization, org_token=org_token)
 # Get all repos that need archiving
 repos = [
     repo
-    for repo in moj_gh.get_unarchived_repos("public")
+    for repo in moj_gh.get_unarchived_repos("all")
     if ready_for_archiving(repo, archive_date)
 ]
 
