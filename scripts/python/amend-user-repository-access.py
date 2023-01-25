@@ -606,7 +606,8 @@ def create_an_issue(user_name, repository_name):
             )
             # Delay for GH API
             time.sleep(5)
-            print("Creating an issue: User access removed, access is now via a team " + user_name + " in " + repository_name)
+            print("Creating an issue: User access removed, access is now via a team " +
+                  user_name + " in " + repository_name)
         except Exception:
             message = (
                 "Warning: Exception in creating an issue for user "
