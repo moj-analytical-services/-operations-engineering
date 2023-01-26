@@ -887,7 +887,7 @@ def correct_team_name(team_name):
     temp_name = ""
     temp_team_name = ""
     new_team_name = ""
-  
+
     if team_name.startswith("."):
         temp_team_name = team_name[len("."):]
     else:
