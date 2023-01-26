@@ -952,8 +952,12 @@ def put_users_into_new_team(repository_name, remaining_users):
             if not does_team_exist(team_name):
                 create_new_team_with_repository(repository_name, team_name)
                 team_id = fetch_team_id(team_name)
-                # Because the oauth_token belongs to AntonyBishop he is added to every team
+                # Depends who adds the oauth_token to repo is added to every team
                 remove_user_from_team(team_id, "AntonyBishop")
+                remove_user_from_team(team_id, "nickwalt01")
+                remove_user_from_team(team_id, "ben-al")
+                remove_user_from_team(
+                    team_id, "moj-operations-engineering-bot")
 
             team_id = fetch_team_id(team_name)
 
