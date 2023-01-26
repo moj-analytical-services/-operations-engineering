@@ -956,8 +956,8 @@ def put_users_into_new_team(repository_name, remaining_users):
                 remove_user_from_team(team_id, "AntonyBishop")
                 remove_user_from_team(team_id, "nickwalt01")
                 remove_user_from_team(team_id, "ben-al")
-                remove_user_from_team(team_id, "moj-operations-engineering-bot")
-
+                remove_user_from_team(
+                    team_id, "moj-operations-engineering-bot")
 
             team_id = fetch_team_id(team_name)
 
