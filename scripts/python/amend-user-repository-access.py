@@ -601,7 +601,7 @@ def create_an_issue(user_name, repository_name):
                 title="User access removed, access is now via a team",
                 body="Hi there \n\n The user "
                 + user_name
-                + " had Direct Member access to this repository and access via a team. \n\n Access is now only via a team. \n\n You may have less access it is dependant upon the teams access to the repo. \n\n If you have any questions, please post in #ask-operations-engineering on Slack. \n\n This issue can be closed. ",
+                + " had Direct Member access to this repository and access via a team. \n\n Access is now only via a team. \n\n You may have less access it is dependant upon the teams access to the repo. \n\n If you have any questions, please post in (#ask-operations-engineering)[https://mojdt.slack.com/archives/C01BUKJSZD4] on Slack. \n\n This issue can be closed. ",
                 assignee=user_name,
             )
             # Delay for GH API
@@ -884,17 +884,23 @@ def correct_team_name(team_name):
     Returns:
         string: converted team name
     """
+    temp_name = ""
+    temp_team_name = ""
     new_team_name = ""
+
     if team_name.startswith("."):
-        temp_name = team_name[len("."):]
-        temp_name = temp_name.replace(".", "-")
-        new_team_name = temp_name.replace(" ", "-")
-        return new_team_name
+        temp_team_name = team_name[len("."):]
     else:
-        temp_name = team_name.replace(".", "-")
-        temp_name = temp_name.replace("_", "-")
-        new_team_name = temp_name.replace(" ", "-")
-    return new_team_name.lower()
+        temp_team_name = team_name
+
+    temp_name = temp_team_name.replace(".", "-")
+    temp_name = temp_name.replace("_", "-")
+    temp_name = temp_name.replace(" ", "-")
+    temp_name = temp_name.replace("--", "-")
+    temp_name = temp_name.replace("---", "-")
+    new_team_name = temp_name.lower()
+
+    return new_team_name
 
 
 def put_user_into_existing_team(
