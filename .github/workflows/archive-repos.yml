@@ -2,8 +2,8 @@ name: Archive repo if over a certain date
 
 on:
   workflow_dispatch:
-  # schedule:
-  #   - cron: "0 12 * * 1-5"
+  schedule:
+    - cron: "0 12 * * 1-5"
 
 jobs:
   archive-repos:
@@ -18,7 +18,7 @@ jobs:
       - run: pip install -r scripts/python/requirements.txt
       - run: python scripts/python/archive-repositories.py
         env:
-          ADMIN_GITHUB_TOKEN: ${{ secrets.OPERATIONS_ENGINEERING }}
+          ADMIN_GITHUB_TOKEN: ${{ secrets.ARCHIVE_FINE_GRAINED_PAT }}
       - name: Report failure to Slack
         if: always()
         uses: ravsamhq/notify-slack-action@v2
