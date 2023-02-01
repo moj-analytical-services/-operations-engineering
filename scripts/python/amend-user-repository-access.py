@@ -885,19 +885,21 @@ def correct_team_name(team_name):
         string: converted team name
     """
     temp_name = ""
-    temp_team_name = ""
     new_team_name = ""
 
-    if team_name.startswith("."):
-        temp_team_name = team_name[len("."):]
-    else:
-        temp_team_name = team_name
-
-    temp_name = temp_team_name.replace(".", "-")
+    temp_name = team_name
+    temp_name = temp_name.replace(".", "-")
     temp_name = temp_name.replace("_", "-")
     temp_name = temp_name.replace(" ", "-")
     temp_name = temp_name.replace("--", "-")
     temp_name = temp_name.replace("---", "-")
+
+    if temp_name.startswith(".") or temp_name.startswith("-"):
+        temp_name = temp_name[1:]
+
+    if temp_name.endswith(".") or temp_name.endswith("-"):
+        temp_name = temp_name[:-1]
+
     new_team_name = temp_name.lower()
 
     return new_team_name
