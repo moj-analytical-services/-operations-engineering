@@ -899,9 +899,7 @@ def correct_team_name(team_name):
     elif temp_name.startswith("-"):
         temp_name = temp_name[len("-"):]
 
-    if temp_name.endswith("."):
-        temp_name = temp_name[0:-1]
-    elif temp_name.endswith("-"):
+    if temp_name.endswith(".") or temp_name.endswith("-"):
         temp_name = temp_name[0:-1]
 
     new_team_name = temp_name.lower()
