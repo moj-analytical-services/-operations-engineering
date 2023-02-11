@@ -13,7 +13,8 @@ class TestGithubService(unittest.TestCase):
 
     def setUp(self):
         self.mock_github = MagicMock()
-        self.patcher = patch(target="github.Github.__new__", return_value=self.mock_github, autospec=True)
+        self.patcher = patch(target="github.Github.__new__",
+                             return_value=self.mock_github, autospec=True)
         self.patcher.start()
         self.addCleanup(self.patcher.stop)
 
@@ -24,7 +25,8 @@ class TestGithubService(unittest.TestCase):
 
     def test_innit_sets_up_class(self):
         self.assertIs(self.mock_github, self.github_service.client)
-        self.assertEqual(ORGANISATION_NAME, self.github_service.organisation_name)
+        self.assertEqual(ORGANISATION_NAME,
+                         self.github_service.organisation_name)
 
     def test_get_outside_collaborators_login_names_returns_login_names(self):
         self.mock_github.get_organization().get_outside_collaborators.return_value = [{"login": "tom-smith"},
@@ -44,12 +46,15 @@ class TestGithubService(unittest.TestCase):
         self.assertEqual([], response)
 
     def test_get_outside_collaborators_login_names_returns_exception_when_collaborators_returns_exception(self):
-        self.mock_github.get_organization().get_outside_collaborators.side_effect = ConnectionError
-        self.assertRaises(ConnectionError, self.github_service.get_outside_collaborators_login_names)
+        self.mock_github.get_organization(
+        ).get_outside_collaborators.side_effect = ConnectionError
+        self.assertRaises(
+            ConnectionError, self.github_service.get_outside_collaborators_login_names)
 
     def test_get_outside_collaborators_login_names_returns_exception_when_organization_returns_exception(self):
         self.mock_github.get_organization.side_effect = ConnectionError
-        self.assertRaises(ConnectionError, self.github_service.get_outside_collaborators_login_names)
+        self.assertRaises(
+            ConnectionError, self.github_service.get_outside_collaborators_login_names)
 
 
 if __name__ == "__main__":
