@@ -1,25 +1,47 @@
 import unittest
-from unittest.mock import Mock, patch
+from unittest.mock import call, MagicMock, patch
 
 from scripts.python.services.GithubService import GithubService
 
 
 class TestGithubService(unittest.TestCase):
-    mock_github = None
-
     def setUp(self):
-        self.mock_github = Mock()
-        self.patcher = patch(target='github.Github.__new__', return_value=self.mock_github)
-        self.patcher.start()
-        self.addCleanup(self.patcher.stop)
+        print("setting up")
 
     def tearDown(self):
-        self.patcher.stop()
+        print("tearing down")
 
     def test_innit_sets_up_class(self):
-        github_service = GithubService('')
-        self.assertIs(self.mock_github, github_service.client)
+        mock_github = MagicMock()
+        patcher = patch(target="github.Github.__new__", return_value=mock_github, autospec=True)
+        patcher.start()
+        self.addCleanup(patcher.stop)
+
+        github_service = GithubService("", "moj-analytical-services")
+
+        self.assertIs(mock_github, github_service.client)
+        self.assertEqual("moj-analytical-services", github_service.organisation_name)
+
+        patcher.stop()
+
+    def test_get_outside_collaborators_login_names_returns_login_names(self):
+        mock_github = MagicMock()
+        patcher = patch(target="github.Github.__new__", return_value=mock_github, autospec=True)
+        patcher.start()
+        self.addCleanup(patcher.stop)
+
+        mock_github.get_organization().get_outside_collaborators.return_value = [{"login": "tom-smith"},
+                                                                                 {"login": "john.smith"}]
+
+        github_service = GithubService("", "moj-analytical-services")
+
+        response = github_service.get_outside_collaborators_login_names()
+        self.assertEqual(["tom-smith", "john.smith"], response)
+        mock_github.get_organization.assert_has_calls(
+            [call(), call('moj-analytical-services'), call().get_outside_collaborators()])
+
+        patcher.stop()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()
