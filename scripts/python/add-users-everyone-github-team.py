@@ -45,6 +45,7 @@ except Exception:
 
 github_service = GithubService(oauth_token, "moj-analytical-services")
 
+
 def organisation_team_id_query() -> gql:
     """A GraphQL query to get the id of an organisation team
 
