@@ -1,9 +1,11 @@
 import sys
 import time
 import traceback
-from github import Github
-from gql import gql, Client
+
+from gql import Client, gql
 from gql.transport.aiohttp import AIOHTTPTransport
+
+from scripts.python.services.GithubService import GithubService
 
 
 def print_stack_trace(message):
@@ -41,6 +43,7 @@ try:
 except Exception:
     print_stack_trace("Exception: Problem with the Client.")
 
+github_service = GithubService(oauth_token, "moj-analytical-services")
 
 def organisation_team_id_query() -> gql:
     """A GraphQL query to get the id of an organisation team
@@ -82,7 +85,7 @@ def run():
     """A function for the main functionality of the script"""
 
     try:
-        gh = Github(oauth_token)
+        gh = github_service.client
         org = gh.get_organization("moj-analytical-services")
         team_id = fetch_team_id()
         gh_team = org.get_team(team_id)

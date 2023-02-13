@@ -1,13 +1,14 @@
 import sys
-import traceback
 import time
-from datetime import datetime
-from datetime import timedelta
-from github import Github
-from gql import gql, Client
+import traceback
+from datetime import datetime, timedelta
+
+from gql import Client, gql
 from gql.transport.aiohttp import AIOHTTPTransport
 
-oauth_token = 0
+from scripts.python.services.GithubService import GithubService
+
+oauth_token = ""
 script_initiator_username = ""
 
 if len(sys.argv) == 2:
@@ -16,6 +17,8 @@ if len(sys.argv) == 2:
 else:
     print("Missing a script input parameter")
     sys.exit(1)
+
+github_service = GithubService(oauth_token, "moj-analytical-services")
 
 repo_issues_enabled = {}
 outside_collaborators = []
@@ -564,7 +567,7 @@ def remove_user_from_repository(user_name, repository_name):
         repository_name (string): Name of repository
     """
     try:
-        gh = Github(oauth_token)
+        gh = github_service.client
         repo = gh.get_repo(MINISTRYOFJUSTICE + repository_name)
         repo.remove_from_collaborators(user_name)
         # Delay for GH API
@@ -595,7 +598,7 @@ def create_an_issue(user_name, repository_name):
 
     if repo_issues_enabled.get(repository_name):
         try:
-            gh = Github(oauth_token)
+            gh = github_service.client
             repo = gh.get_repo(MINISTRYOFJUSTICE + repository_name)
             repo.create_issue(
                 title="User access removed, access is now via a team",
@@ -625,7 +628,7 @@ def close_expired_issues(repository_name):
         repository_name (string): The name of the repository
     """
     try:
-        gh = Github(oauth_token)
+        gh = github_service.client
         repo = gh.get_repo(MINISTRYOFJUSTICE + repository_name)
         issues = repo.get_issues()
         for issue in issues:
@@ -659,7 +662,7 @@ def get_outside_collaborators():
     """
     usernames = []
     try:
-        gh = Github(oauth_token)
+        gh = github_service.client
         org = gh.get_organization("moj-analytical-services")
         for outside_collaborator in org.get_outside_collaborators():
             usernames.append(outside_collaborator.login)
@@ -724,7 +727,7 @@ def get_user_permission(repository_name, username):
     users_permission = None
 
     try:
-        gh = Github(oauth_token)
+        gh = github_service.client
         repo = gh.get_repo(MINISTRYOFJUSTICE + repository_name)
         user = gh.get_user(username)
         users_permission = repo.get_collaborator_permission(user)
@@ -743,7 +746,7 @@ def remove_user_from_team(team_id, username):
         username (string): the name of the user
     """
     try:
-        gh = Github(oauth_token)
+        gh = github_service.client
         org = gh.get_organization("moj-analytical-services")
         gh_team = org.get_team(team_id)
         user = gh.get_user(username)
@@ -769,7 +772,7 @@ def add_user_to_team(team_id, username):
         username (string): the name of the user
     """
     try:
-        gh = Github(oauth_token)
+        gh = github_service.client
         org = gh.get_organization("moj-analytical-services")
         gh_team = org.get_team(team_id)
         user = gh.get_user(username)
@@ -795,7 +798,7 @@ def create_new_team_with_repository(repository_name, team_name):
         team_name (string): the name of the team
     """
     try:
-        gh = Github(oauth_token)
+        gh = github_service.client
         repo = gh.get_repo(MINISTRYOFJUSTICE + repository_name)
         org = gh.get_organization("moj-analytical-services")
         org.create_team(
@@ -826,7 +829,7 @@ def does_team_exist(team_name):
     team_found = False
 
     try:
-        gh = Github(oauth_token)
+        gh = github_service.client
         org = gh.get_organization("moj-analytical-services")
         gh_teams = org.get_teams()
         for gh_team in gh_teams:
@@ -855,7 +858,7 @@ def change_team_repository_permission(repository_name, team_name, team_id, permi
         permission = "push"
 
     try:
-        gh = Github(oauth_token)
+        gh = github_service.client
         repo = gh.get_repo(MINISTRYOFJUSTICE + repository_name)
         org = gh.get_organization("moj-analytical-services")
         gh_team = org.get_team(team_id)

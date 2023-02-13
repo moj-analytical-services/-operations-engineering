@@ -5,8 +5,8 @@ from github import Github
 
 class GithubService:
     def __init__(self, org_token: str, organisation_name: str) -> None:
-        self.client = Github(org_token)
-        self.organisation_name = organisation_name
+        self.client: Github = Github(org_token)
+        self.organisation_name: str = organisation_name
 
     def get_outside_collaborators_login_names(self) -> list[str]:
         logging.info("Getting Outside Collaborators Login Names")
