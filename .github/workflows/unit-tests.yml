@@ -1,6 +1,7 @@
 name: unit-tests
 
-workflow_dispatch:
+on:
+  workflow_dispatch:
   push:
   pull_request:
     types: [ opened, edited, reopened, synchronize ]
