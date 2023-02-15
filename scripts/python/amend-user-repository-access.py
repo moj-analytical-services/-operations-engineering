@@ -891,8 +891,8 @@ def correct_team_name(team_name):
     temp_name = temp_name.replace(".", "-")
     temp_name = temp_name.replace("_", "-")
     temp_name = temp_name.replace(" ", "-")
-    temp_name = temp_name.replace("--", "-")
     temp_name = temp_name.replace("---", "-")
+    temp_name = temp_name.replace("--", "-")
 
     if temp_name.startswith(".") or temp_name.startswith("-"):
         temp_name = temp_name[1:]
