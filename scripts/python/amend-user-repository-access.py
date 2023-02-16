@@ -6,7 +6,7 @@ from datetime import datetime, timedelta
 from gql import Client, gql
 from gql.transport.aiohttp import AIOHTTPTransport
 
-from scripts.python.services.GithubService import GithubService
+from services.GithubService import GithubService
 
 oauth_token = ""
 script_initiator_username = ""

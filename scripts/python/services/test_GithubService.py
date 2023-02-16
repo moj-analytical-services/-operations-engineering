@@ -1,7 +1,7 @@
 import unittest
 from unittest.mock import call, MagicMock, patch
 
-from scripts.python.services.GithubService import GithubService
+from .GithubService import GithubService
 
 ORGANISATION_NAME = "moj-analytical-services"
 
