@@ -23,7 +23,7 @@ class TestGithubService(unittest.TestCase):
     def tearDown(self):
         self.patcher.stop()
 
-    def test_innit_sets_up_class(self):
+    def test_init_sets_up_class(self):
         self.assertIs(self.mock_github, self.github_service.client)
         self.assertEqual(ORGANISATION_NAME,
                          self.github_service.organisation_name)
