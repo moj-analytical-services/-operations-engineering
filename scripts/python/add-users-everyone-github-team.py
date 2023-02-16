@@ -5,7 +5,7 @@ import traceback
 from gql import Client, gql
 from gql.transport.aiohttp import AIOHTTPTransport
 
-from scripts.python.services.GithubService import GithubService
+from services.GithubService import GithubService
 
 
 def print_stack_trace(message):
