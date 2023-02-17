@@ -97,7 +97,8 @@ def main():
         print_stack_trace("Exception: Problem with the API URL or GH Token")
 
     try:
-        gql_client = Client(transport=transport, fetch_schema_from_transport=False)
+        gql_client = Client(transport=transport,
+                            fetch_schema_from_transport=False)
     except Exception:
         print_stack_trace("Exception: Problem with the Client.")
 
