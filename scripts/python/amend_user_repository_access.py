@@ -626,26 +626,6 @@ def close_expired_issues(github_service: GithubService, repository_name: str):
         print_stack_trace(message)
 
 
-def get_outside_collaborators(github_service: GithubService):
-    """
-    Create a list of the outside collaborators usernames
-
-    Returns:
-        list: The list of outside collaborators usernames
-    """
-    usernames = []
-    try:
-        gh = github_service.client
-        org = gh.get_organization("moj-analytical-services")
-        for outside_collaborator in org.get_outside_collaborators():
-            usernames.append(outside_collaborator.login)
-    except Exception:
-        message = "Warning: Exception in getting outside collaborators in get_outside_collaborators()"
-        print_stack_trace(message)
-
-    return usernames
-
-
 def remove_users_with_duplicate_access(github_service: GithubService, repo_issues_enabled,
                                        repository_name, repository_direct_users, users_not_in_a_team, org_teams
                                        ):
@@ -967,7 +947,7 @@ def run(github_service: GithubService, gql_client: Client, badly_named_repositor
     """A function for the main functionality of the script"""
 
     # Get the usernames of the outside collaborators
-    outside_collaborators = get_outside_collaborators(github_service)
+    outside_collaborators = github_service.get_outside_collaborators_login_names()
 
     # Get the MoJ organisation teams and users info
     org_teams = fetch_teams(gql_client)
