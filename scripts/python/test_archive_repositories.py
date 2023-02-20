@@ -4,7 +4,7 @@ from unittest.mock import patch
 
 from github import Github
 
-from scripts.python import archive_repositories
+import archive_repositories
 
 
 @patch.object(Github, "__new__")
