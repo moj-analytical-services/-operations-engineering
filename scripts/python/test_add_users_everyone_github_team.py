@@ -1,4 +1,3 @@
-import sys
 import unittest
 from unittest.mock import patch
 
@@ -14,8 +13,8 @@ import add_users_everyone_github_team
 @patch.object(Client, "__new__")
 class TestAddUsersEveryoneGithubTeam(unittest.TestCase):
 
+    @patch("sys.argv", ["", "test"])
     def test_main_smoke_test(self, mock1, mock2, mock3):
-        sys.argv = ["", "test"]
         add_users_everyone_github_team.main()
 
     def test_main_returns_error_when_no_token_provided(self, mock1, mock2, mock3):
