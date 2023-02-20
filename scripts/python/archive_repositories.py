@@ -87,7 +87,8 @@ def main():
         f"Beginning archive of inactive repositories for GitHub organization: {organization}"
     )
     logging.info("-----------------------------")
-    logging.info(f"Searching for inactive repositories from date: {archive_date}")
+    logging.info(
+        f"Searching for inactive repositories from date: {archive_date}")
     logging.info("-----------------------------")
 
     # Archive repos
