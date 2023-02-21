@@ -527,37 +527,6 @@ def fetch_teams(gql_client: Client) -> list:
 
     return teams_list
 
-
-def remove_user_from_repository(github_service: GithubService, user_name, repository_name):
-    """Removes the user from the repository
-
-    Args:
-        user_name (string): User name of the user to remove
-        repository_name (string): Name of repository
-    """
-    try:
-        gh = github_service.client
-        repo = gh.get_repo(
-            f"{github_service.organisation_name}/{repository_name}")
-        repo.remove_from_collaborators(user_name)
-        # Delay for GH API
-        time.sleep(5)
-        print(
-            "Removing the user "
-            + user_name
-            + " from the repository: "
-            + repository_name
-        )
-    except Exception:
-        message = (
-            "Warning: Exception in removing a user "
-            + user_name
-            + " from the repository: "
-            + repository_name
-        )
-        print_stack_trace(message)
-
-
 def remove_users_with_duplicate_access(github_service: GithubService, repo_issues_enabled,
                                        repository_name, repository_direct_users, users_not_in_a_team, org_teams
                                        ):
@@ -591,8 +560,7 @@ def remove_users_with_duplicate_access(github_service: GithubService, repo_issue
                                                                                              repository_name)
 
                     # remove the direct user from the repository
-                    remove_user_from_repository(
-                        github_service, username, repository_name)
+                    github_service.remove_user_from_repository(username, repository_name)
 
                     # save values for next iteration
                     previous_user = username
@@ -830,8 +798,7 @@ def put_user_into_existing_team(
                 repository_name in team.team_repositories
             ):
                 add_user_to_team(github_service, team.team_id, username)
-                remove_user_from_repository(
-                    github_service, username, repository_name)
+                github_service.remove_user_from_repository(username, repository_name)
                 users_not_in_a_team.remove(username)
 
 
@@ -872,8 +839,7 @@ def put_users_into_new_team(github_service: GithubService, gql_client: Client, r
                                               )
 
             add_user_to_team(github_service, team_id, username)
-            remove_user_from_repository(
-                github_service, username, repository_name)
+            github_service.remove_user_from_repository(username, repository_name)
 
 
 def run(github_service: GithubService, gql_client: Client, badly_named_repositories: list[str], repo_issues_enabled):
