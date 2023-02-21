@@ -35,7 +35,8 @@ class GithubService:
                 and grace_period < datetime.now())
 
     def create_an_access_removed_issue_for_user_in_repository(self, user_name: str, repository_name: str):
-        logging.info(f"Creating an access removed issue for user {user_name} in repository {repository_name}")
+        logging.info(
+            f"Creating an access removed issue for user {user_name} in repository {repository_name}")
         self.client.get_repo(f"{self.organisation_name}/{repository_name}").create_issue(
             title=self.USER_ACCESS_REMOVED_ISSUE_TITLE,
             assignee=user_name,

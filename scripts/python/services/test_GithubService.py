@@ -153,7 +153,8 @@ class TestGithubServiceCreateAnAccessRemovedIssueForUserInRepository(unittest.Te
 
     def test_calls_downstream_services(self, mock_github):
         github_service = GithubService("", ORGANISATION_NAME)
-        github_service.create_an_access_removed_issue_for_user_in_repository("test_user", "test_repository")
+        github_service.create_an_access_removed_issue_for_user_in_repository(
+            "test_user", "test_repository")
         github_service.client.get_repo.assert_has_calls(
             [call('moj-analytical-services/test_repository'),
              call().create_issue(title=self.USER_ACCESS_REMOVED_ISSUE_TITLE, assignee='test_user',

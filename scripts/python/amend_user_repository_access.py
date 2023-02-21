@@ -558,9 +558,6 @@ def remove_user_from_repository(github_service: GithubService, user_name, reposi
         print_stack_trace(message)
 
 
-
-
-
 def remove_users_with_duplicate_access(github_service: GithubService, repo_issues_enabled,
                                        repository_name, repository_direct_users, users_not_in_a_team, org_teams
                                        ):
