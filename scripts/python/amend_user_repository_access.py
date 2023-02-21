@@ -1,7 +1,6 @@
 import sys
 import time
 import traceback
-from datetime import datetime, timedelta
 
 from gql import Client, gql
 from gql.transport.aiohttp import AIOHTTPTransport
@@ -593,39 +592,6 @@ def create_an_issue(github_service: GithubService, repo_issues_enabled, user_nam
             print_stack_trace(message)
 
 
-def close_expired_issues(github_service: GithubService, repository_name: str):
-    """Close issues that have been open longer than 45 days
-
-    Args:
-        repository_name (string): The name of the repository
-    """
-    try:
-        gh = github_service.client
-        repo = gh.get_repo(
-            f"{github_service.organisation_name}/{repository_name}")
-        issues = repo.get_issues()
-        for issue in issues:
-            # Check for open issues that match the issue created by this script
-            if (
-                issue.title == "User access removed, access is now via a team"
-                and issue.state == "open"
-            ):
-                created_date = issue.created_at
-                grace_period = created_date + timedelta(days=45)
-                # Check if the 45 day grace period has expired
-                if grace_period < datetime.now():
-                    # Close issue
-                    issue.edit(state="closed")
-                    # Delay for GH API
-                    time.sleep(5)
-                    print("Closing issue in " + repository_name)
-    except Exception:
-        message = (
-            "Warning: Exception in closing issue in the repository: " + repository_name
-        )
-        print_stack_trace(message)
-
-
 def remove_users_with_duplicate_access(github_service: GithubService, repo_issues_enabled,
                                        repository_name, repository_direct_users, users_not_in_a_team, org_teams
                                        ):
@@ -961,7 +927,8 @@ def run(github_service: GithubService, gql_client: Client, badly_named_repositor
 
         if repository.name not in badly_named_repositories:
             # close any previously opened issues that have expired
-            close_expired_issues(github_service, repository.name)
+            github_service.close_expired_issues(
+                github_service, repository.name)
 
             users_not_in_a_team = repository.direct_members
 
