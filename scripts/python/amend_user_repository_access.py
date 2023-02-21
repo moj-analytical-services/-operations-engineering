@@ -927,7 +927,8 @@ def run(github_service: GithubService, gql_client: Client, badly_named_repositor
 
         if repository.name not in badly_named_repositories:
             # close any previously opened issues that have expired
-            github_service.close_expired_issues(github_service, repository.name)
+            github_service.close_expired_issues(
+                github_service, repository.name)
 
             users_not_in_a_team = repository.direct_members
 

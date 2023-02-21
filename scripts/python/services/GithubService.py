@@ -18,7 +18,8 @@ class GithubService:
 
     def close_expired_issues(self, repository_name: str):
         logging.info(f"Closing expired issues for {repository_name}")
-        issues = self.client.get_repo(f"{self.organisation_name}/{repository_name}").get_issues() or []
+        issues = self.client.get_repo(
+            f"{self.organisation_name}/{repository_name}").get_issues() or []
         for issue in issues:
             if self.__is_expired(issue):
                 issue.edit(state="closed")
