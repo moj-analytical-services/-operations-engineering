@@ -527,6 +527,7 @@ def fetch_teams(gql_client: Client) -> list:
 
     return teams_list
 
+
 def remove_users_with_duplicate_access(github_service: GithubService, repo_issues_enabled,
                                        repository_name, repository_direct_users, users_not_in_a_team, org_teams
                                        ):
@@ -560,7 +561,8 @@ def remove_users_with_duplicate_access(github_service: GithubService, repo_issue
                                                                                              repository_name)
 
                     # remove the direct user from the repository
-                    github_service.remove_user_from_repository(username, repository_name)
+                    github_service.remove_user_from_repository(
+                        username, repository_name)
 
                     # save values for next iteration
                     previous_user = username
@@ -798,7 +800,8 @@ def put_user_into_existing_team(
                 repository_name in team.team_repositories
             ):
                 add_user_to_team(github_service, team.team_id, username)
-                github_service.remove_user_from_repository(username, repository_name)
+                github_service.remove_user_from_repository(
+                    username, repository_name)
                 users_not_in_a_team.remove(username)
 
 
@@ -839,7 +842,8 @@ def put_users_into_new_team(github_service: GithubService, gql_client: Client, r
                                               )
 
             add_user_to_team(github_service, team_id, username)
-            github_service.remove_user_from_repository(username, repository_name)
+            github_service.remove_user_from_repository(
+                username, repository_name)
 
 
 def run(github_service: GithubService, gql_client: Client, badly_named_repositories: list[str], repo_issues_enabled):
