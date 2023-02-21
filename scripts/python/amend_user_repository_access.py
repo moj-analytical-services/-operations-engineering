@@ -558,40 +558,6 @@ def remove_user_from_repository(github_service: GithubService, user_name, reposi
         print_stack_trace(message)
 
 
-def create_an_issue(github_service: GithubService, repo_issues_enabled, user_name, repository_name):
-    """Create an issue for the user in the repository
-
-    Args:
-        user_name (string): The username of the user
-        repository_name (string): The name of the repository
-    """
-
-    if repo_issues_enabled.get(repository_name, repo_issues_enabled):
-        try:
-            gh = github_service.client
-            repo = gh.get_repo(
-                f"{github_service.organisation_name}/{repository_name}")
-            repo.create_issue(
-                title="User access removed, access is now via a team",
-                body="Hi there \n\n The user "
-                     + user_name
-                     + " had Direct Member access to this repository and access via a team. \n\n Access is now only via a team. \n\n You may have less access it is dependant upon the teams access to the repo. \n\n If you have any questions, please post in (#ask-operations-engineering)[https://mojdt.slack.com/archives/C01BUKJSZD4] on Slack. \n\n This issue can be closed. ",
-                assignee=user_name,
-            )
-            # Delay for GH API
-            time.sleep(5)
-            print("Creating an issue: User access removed, access is now via a team " +
-                  user_name + " in " + repository_name)
-        except Exception:
-            message = (
-                "Warning: Exception in creating an issue for user "
-                + user_name
-                + " in the repository: "
-                + repository_name
-            )
-            print_stack_trace(message)
-
-
 def remove_users_with_duplicate_access(github_service: GithubService, repo_issues_enabled,
                                        repository_name, repository_direct_users, users_not_in_a_team, org_teams
                                        ):
@@ -620,8 +586,9 @@ def remove_users_with_duplicate_access(github_service: GithubService, repo_issue
                     repository_name != previous_repository
                 ):
                     # raise an issue to say the user has been removed and has access via the team
-                    create_an_issue(
-                        github_service, repo_issues_enabled, username, repository_name)
+                    if repo_issues_enabled.get(repository_name, repo_issues_enabled):
+                        github_service.create_an_access_removed_issue_for_user_in_repository(username,
+                                                                                             repository_name)
 
                     # remove the direct user from the repository
                     remove_user_from_repository(
