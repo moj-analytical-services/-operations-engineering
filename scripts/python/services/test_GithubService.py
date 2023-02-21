@@ -1,6 +1,8 @@
 import unittest
 from datetime import datetime, timedelta
-from unittest.mock import call, MagicMock, patch
+from unittest.mock import call, MagicMock, Mock, patch
+
+from github.NamedUser import NamedUser
 
 from .GithubService import GithubService
 
@@ -22,8 +24,10 @@ class TestGithubServiceInit(unittest.TestCase):
 class TestGithubServiceGetOutsideCollaborators(unittest.TestCase):
 
     def test_returns_login_names(self, mock_github):
-        mock_github.return_value.get_organization().get_outside_collaborators.return_value = [{"login": "tom-smith"},
-                                                                                              {"login": "john.smith"}]
+        mock_github.return_value.get_organization().get_outside_collaborators.return_value = [
+            Mock(NamedUser, login="tom-smith"),
+            Mock(NamedUser, login="john.smith"),
+        ]
         response = GithubService(
             "", ORGANISATION_NAME).get_outside_collaborators_login_names()
         self.assertEqual(["tom-smith", "john.smith"], response)
