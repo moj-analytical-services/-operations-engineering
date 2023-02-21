@@ -19,8 +19,10 @@ class TestGithubServiceInit(unittest.TestCase):
         mock_github_client_core_api.return_value = "test_mock_github_client_core_api"
         mock_github_client_gql_api.return_value = "test_mock_github_client_gql_api"
         github_service = GithubService("", ORGANISATION_NAME)
-        self.assertEqual("test_mock_github_client_core_api", github_service.github_client_core_api)
-        self.assertEqual("test_mock_github_client_gql_api", github_service.github_client_gql_api)
+        self.assertEqual("test_mock_github_client_core_api",
+                         github_service.github_client_core_api)
+        self.assertEqual("test_mock_github_client_gql_api",
+                         github_service.github_client_gql_api)
         self.assertEqual(ORGANISATION_NAME,
                          github_service.organisation_name)
 

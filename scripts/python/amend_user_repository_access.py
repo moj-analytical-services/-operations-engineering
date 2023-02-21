@@ -474,7 +474,8 @@ def fetch_repositories(github_service: GithubService, outside_collaborators: lis
         list: A list that contains all the repositories data ie name, users
     """
     repositories_list = []
-    repository_names_list = fetch_repo_names(github_service, repo_issues_enabled)
+    repository_names_list = fetch_repo_names(
+        github_service, repo_issues_enabled)
     for repository_name in repository_names_list:
         repositories_list.append(fetch_repository(
             github_service, repository_name, outside_collaborators))
