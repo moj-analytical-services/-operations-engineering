@@ -124,13 +124,13 @@ class TestGithubServiceCloseExpiredIssues(unittest.TestCase):
         self.assertEqual(mock_issue.edit.call_args_list, [])
 
     def test_does_not_edit_issue_when_empty_list(self, mock_github):
-        mock_issue = self.happy_path_base_issue_mock(state="INCORRECT_STATE")
+        mock_issue = self.happy_path_base_issue_mock()
         mock_github.return_value.get_repo().get_issues.return_value = []
         GithubService("", ORGANISATION_NAME).close_expired_issues("test")
         self.assertEqual(mock_issue.edit.call_args_list, [])
 
     def test_does_not_edit_issue_when_none_provided(self, mock_github):
-        mock_issue = self.happy_path_base_issue_mock(state="INCORRECT_STATE")
+        mock_issue = self.happy_path_base_issue_mock()
         mock_github.return_value.get_repo().get_issues.return_value = None
         GithubService("", ORGANISATION_NAME).close_expired_issues("test")
         self.assertEqual(mock_issue.edit.call_args_list, [])
