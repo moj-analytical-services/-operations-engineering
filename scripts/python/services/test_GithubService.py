@@ -7,6 +7,7 @@ from github.NamedUser import NamedUser
 from .GithubService import GithubService
 
 ORGANISATION_NAME = "moj-analytical-services"
+USER_ACCESS_REMOVED_ISSUE_TITLE = "User access removed, access is now via a team"
 
 
 @patch("github.Github.__new__")
@@ -64,7 +65,6 @@ class TestGithubServiceGetOutsideCollaborators(unittest.TestCase):
 @patch("github.Github.__new__")
 class TestGithubServiceCloseExpiredIssues(unittest.TestCase):
     DATE_BOUNDARY = 45
-    ISSUE_TITLE_CRITERIA = "User access removed, access is now via a team"
     ISSUE_STATE_CRITERIA = "open"
 
     inside_boundary_criteria = None
@@ -82,7 +82,7 @@ class TestGithubServiceCloseExpiredIssues(unittest.TestCase):
     def happy_path_base_issue_mock(self, created_at=None, title=None,
                                    state=None) -> MagicMock:
         return MagicMock(created_at=created_at or self.inside_boundary_criteria,
-                         title=title or self.ISSUE_TITLE_CRITERIA,
+                         title=title or USER_ACCESS_REMOVED_ISSUE_TITLE,
                          state=state or self.ISSUE_STATE_CRITERIA)
 
     def test_calls_downstream_services(self, mock_github):
@@ -145,6 +145,29 @@ class TestGithubServiceCloseExpiredIssues(unittest.TestCase):
         github_service = GithubService("", ORGANISATION_NAME)
         self.assertRaises(
             ConnectionError, github_service.close_expired_issues, "test")
+
+
+@patch("github.Github.__new__")
+class TestGithubServiceCreateAnAccessRemovedIssueForUserInRepository(unittest.TestCase):
+    USER_ACCESS_REMOVED_ISSUE_TITLE = "User access removed, access is now via a team"
+
+    def test_calls_downstream_services(self, mock_github):
+        github_service = GithubService("", ORGANISATION_NAME)
+        github_service.create_an_access_removed_issue_for_user_in_repository("test_user", "test_repository")
+        github_service.client.get_repo.assert_has_calls(
+            [call('moj-analytical-services/test_repository'),
+             call().create_issue(title=self.USER_ACCESS_REMOVED_ISSUE_TITLE, assignee='test_user',
+                                 body='Hi there\n\nThe user test_user had Direct Member access to this repository and access via a team.\n\nAccess is now only via a team.\n\nYou may have less access it is dependant upon the teams access to the repo.\n\nIf you have any questions, please post in (#ask-operations-engineering)[https://mojdt.slack.com/archives/C01BUKJSZD4] on Slack.\n\nThis issue can be closed.')]
+
+        )
+
+    def test_throws_exception_when_client_throws_exception(self, mock_github):
+        mock_github.return_value.get_repo = MagicMock(
+            side_effect=ConnectionError)
+        github_service = GithubService("", ORGANISATION_NAME)
+        self.assertRaises(
+            ConnectionError, github_service.create_an_access_removed_issue_for_user_in_repository, "test_user",
+            "test_repository")
 
 
 if __name__ == "__main__":
