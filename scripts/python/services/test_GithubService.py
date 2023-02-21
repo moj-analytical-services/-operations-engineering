@@ -149,15 +149,13 @@ class TestGithubServiceCloseExpiredIssues(unittest.TestCase):
 
 @patch("github.Github.__new__")
 class TestGithubServiceCreateAnAccessRemovedIssueForUserInRepository(unittest.TestCase):
-    USER_ACCESS_REMOVED_ISSUE_TITLE = "User access removed, access is now via a team"
-
     def test_calls_downstream_services(self, mock_github):
         github_service = GithubService("", ORGANISATION_NAME)
         github_service.create_an_access_removed_issue_for_user_in_repository(
             "test_user", "test_repository")
         github_service.client.get_repo.assert_has_calls(
             [call('moj-analytical-services/test_repository'),
-             call().create_issue(title=self.USER_ACCESS_REMOVED_ISSUE_TITLE, assignee='test_user',
+             call().create_issue(title=USER_ACCESS_REMOVED_ISSUE_TITLE, assignee='test_user',
                                  body='Hi there\n\nThe user test_user had Direct Member access to this repository and access via a team.\n\nAccess is now only via a team.\n\nYou may have less access it is dependant upon the teams access to the repo.\n\nIf you have any questions, please post in (#ask-operations-engineering)[https://mojdt.slack.com/archives/C01BUKJSZD4] on Slack.\n\nThis issue can be closed.')]
 
         )
