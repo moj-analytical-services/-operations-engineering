@@ -14,7 +14,7 @@ class GithubService:
         logging.info("Getting Outside Collaborators Login Names")
         outside_collaborators = self.client.get_organization(
             self.organisation_name).get_outside_collaborators() or []
-        return [outside_collaborator.get("login") for outside_collaborator in outside_collaborators]
+        return [outside_collaborator.login for outside_collaborator in outside_collaborators]
 
     def close_expired_issues(self, repository_name: str):
         logging.info(f"Closing expired issues for {repository_name}")
