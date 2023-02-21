@@ -54,3 +54,9 @@ class GithubService:
         This issue can be closed.
         """).strip("\n")
         )
+
+    def remove_user_from_repository(self, user_name: str, repository_name: str):
+        logging.info(
+            f"Removing user {user_name} from repository {repository_name}")
+        self.client.get_repo(
+            f"{self.organisation_name}/{repository_name}").remove_from_collaborators(user_name)

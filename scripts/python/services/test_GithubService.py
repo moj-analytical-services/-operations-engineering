@@ -169,5 +169,25 @@ class TestGithubServiceCreateAnAccessRemovedIssueForUserInRepository(unittest.Te
             "test_repository")
 
 
+@patch("github.Github.__new__")
+class TestGithubServiceRemoveUserFromRepository(unittest.TestCase):
+    def test_calls_downstream_services(self, mock_github):
+        github_service = GithubService("", ORGANISATION_NAME)
+        github_service.remove_user_from_repository(
+            "test_user", "test_repository")
+        github_service.client.get_repo.assert_has_calls([
+            call('moj-analytical-services/test_repository'),
+            call().remove_from_collaborators('test_user')
+        ])
+
+    def test_throws_exception_when_client_throws_exception(self, mock_github):
+        mock_github.return_value.get_repo = MagicMock(
+            side_effect=ConnectionError)
+        github_service = GithubService("", ORGANISATION_NAME)
+        self.assertRaises(
+            ConnectionError, github_service.remove_user_from_repository, "test_user",
+            "test_repository")
+
+
 if __name__ == "__main__":
     unittest.main()
