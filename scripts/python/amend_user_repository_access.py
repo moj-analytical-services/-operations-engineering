@@ -573,31 +573,6 @@ def remove_users_with_duplicate_access(github_service: GithubService, repo_issue
                     users_not_in_a_team.remove(username)
 
 
-def get_user_permission(github_service: GithubService, repository_name, username):
-    """gets the user permissions for a repository
-
-    Args:
-        repository_name (string): the name of the repository
-        username (string): the name of the user
-
-    Returns:
-        string: the user permission level
-    """
-    users_permission = None
-
-    try:
-        gh = github_service.github_client_core_api
-        repo = gh.get_repo(
-            f"{github_service.organisation_name}/{repository_name}")
-        user = gh.get_user(username)
-        users_permission = repo.get_collaborator_permission(user)
-    except Exception:
-        message = "Warning: Exception getting the users permission " + username
-        print_stack_trace(message)
-
-    return users_permission
-
-
 def remove_user_from_team(github_service: GithubService, team_id, username):
     """remove a user from a team
 
@@ -787,8 +762,7 @@ def put_user_into_existing_team(
     elif len(users_not_in_a_team) == 0:
         pass
     else:
-        users_permission = get_user_permission(
-            github_service, repository_name, username)
+        users_permission = github_service.get_user_permission_for_repository(username, repository_name)
 
         # create a team name that has the same permissions as the user
         temp_name = repository_name + "-" + users_permission + "-team"
@@ -819,8 +793,7 @@ def put_users_into_new_team(github_service: GithubService, repository_name, rema
         return
     else:
         for username in remaining_users:
-            users_permission = get_user_permission(
-                github_service, repository_name, username)
+            users_permission = github_service.get_user_permission_for_repository(username, repository_name)
 
             temp_name = repository_name + "-" + users_permission + "-team"
             team_name = correct_team_name(temp_name)
