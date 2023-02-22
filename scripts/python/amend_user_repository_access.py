@@ -782,7 +782,8 @@ def put_users_into_new_team(github_service: GithubService, repository_name, rema
                 github_service.remove_user_from_team("AntonyBishop", team_id)
                 github_service.remove_user_from_team("nickwalt01", team_id)
                 github_service.remove_user_from_team("ben-al", team_id)
-                github_service.remove_user_from_team("moj-operations-engineering-bot", team_id)
+                github_service.remove_user_from_team(
+                    "moj-operations-engineering-bot", team_id)
 
             team_id = fetch_team_id(github_service, team_name)
 

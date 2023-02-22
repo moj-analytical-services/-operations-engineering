@@ -236,7 +236,8 @@ class TestGithubServiceRemoveUserFromTeam(unittest.TestCase):
         mock_github_client_core_api.return_value.get_user.return_value = "mock_user"
         github_service = GithubService("", ORGANISATION_NAME)
         github_service.remove_user_from_team("test_user", "test_repository")
-        github_service.github_client_core_api.get_user.assert_has_calls([call('test_user')])
+        github_service.github_client_core_api.get_user.assert_has_calls([
+                                                                        call('test_user')])
         github_service.github_client_core_api.get_organization.assert_has_calls([
             call('moj-analytical-services'),
             call().get_team('test_repository'),
@@ -244,9 +245,11 @@ class TestGithubServiceRemoveUserFromTeam(unittest.TestCase):
         ])
 
     def test_throws_exception_when_client_throws_exception(self, mock_github_client_core_api):
-        mock_github_client_core_api.return_value.get_organization = MagicMock(side_effect=ConnectionError)
+        mock_github_client_core_api.return_value.get_organization = MagicMock(
+            side_effect=ConnectionError)
         github_service = GithubService("", ORGANISATION_NAME)
-        self.assertRaises(ConnectionError, github_service.remove_user_from_team, "test_user", "test_repository")
+        self.assertRaises(
+            ConnectionError, github_service.remove_user_from_team, "test_user", "test_repository")
 
 
 if __name__ == "__main__":
