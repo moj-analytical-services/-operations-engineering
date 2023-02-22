@@ -63,7 +63,7 @@ def run(github_service: GithubService, gql_client: Client):
     """A function for the main functionality of the script"""
 
     try:
-        gh = github_service.client
+        gh = github_service.github_client_core_api
         org = gh.get_organization("moj-analytical-services")
         team_id = fetch_team_id(gql_client)
         gh_team = org.get_team(team_id)

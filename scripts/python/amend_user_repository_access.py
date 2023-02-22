@@ -2,8 +2,7 @@ import sys
 import time
 import traceback
 
-from gql import Client, gql
-from gql.transport.aiohttp import AIOHTTPTransport
+from gql import gql
 from graphql import DocumentNode
 
 from services.GithubService import GithubService
@@ -239,7 +238,7 @@ def team_user_names_query(after_cursor=None, team_name=None) -> DocumentNode:
     return gql(query)
 
 
-def fetch_repo_names(gql_client: Client, repo_issues_enabled) -> list:
+def fetch_repo_names(github_service: GithubService, repo_issues_enabled) -> list:
     """A wrapper function to run a GraphQL query to get the list of repo names in the organisation
 
     Returns:
@@ -253,7 +252,7 @@ def fetch_repo_names(gql_client: Client, repo_issues_enabled) -> list:
         query = organisation_repo_name_query(after_cursor)
 
         try:
-            data = gql_client.execute(query)
+            data = github_service.github_client_gql_api.execute(query)
         except Exception as err:
             print("Exception in fetch_repo_names()")
             print(err)
@@ -279,7 +278,8 @@ def fetch_repo_names(gql_client: Client, repo_issues_enabled) -> list:
     return repo_name_list
 
 
-def fetch_repository_users(gql_client: Client, repository_name: str, outside_collaborators: list[str]) -> list:
+def fetch_repository_users(github_service: GithubService, repository_name: str,
+                           outside_collaborators: list[str]) -> list:
     """A wrapper function to run a GraphQL query to get the list of users within an repository with direct access
 
     Args:
@@ -296,7 +296,7 @@ def fetch_repository_users(gql_client: Client, repository_name: str, outside_col
         query = repository_user_names_query(after_cursor, repository_name)
 
         try:
-            data = gql_client.execute(query)
+            data = github_service.github_client_gql_api.execute(query)
         except Exception as err:
             print("Exception in fetch_repository_users()")
             print(err)
@@ -316,7 +316,7 @@ def fetch_repository_users(gql_client: Client, repository_name: str, outside_col
     return repository_user_name_list
 
 
-def fetch_team_names(gql_client: Client) -> list:
+def fetch_team_names(github_service: GithubService) -> list:
     """A wrapper function to run a GraphQL query to get the list of teams in the organisation
 
     Returns:
@@ -329,7 +329,7 @@ def fetch_team_names(gql_client: Client) -> list:
     while has_next_page:
         query = organisation_teams_name_query(after_cursor)
         try:
-            data = gql_client.execute(query)
+            data = github_service.github_client_gql_api.execute(query)
         except Exception as err:
             print("Exception in fetch_team_names()")
             print(err)
@@ -346,7 +346,7 @@ def fetch_team_names(gql_client: Client) -> list:
     return team_name_list
 
 
-def fetch_team_id(gql_client: Client, team_name) -> int:
+def fetch_team_id(github_service: GithubService, team_name) -> int:
     """A wrapper function to run a GraphQL query to get the team ID
 
     Args:
@@ -357,7 +357,7 @@ def fetch_team_id(gql_client: Client, team_name) -> int:
     """
     query = organisation_team_id_query(team_name)
     try:
-        data = gql_client.execute(query)
+        data = github_service.github_client_gql_api.execute(query)
     except Exception as err:
         print("Exception in fetch_team_id()")
         print(err)
@@ -370,7 +370,7 @@ def fetch_team_id(gql_client: Client, team_name) -> int:
     return 0
 
 
-def fetch_team_users(gql_client: Client, team_name) -> list:
+def fetch_team_users(github_service: GithubService, team_name) -> list:
     """A wrapper function to run a GraphQL query to get the list of users within an organisation team
 
     Args:
@@ -386,7 +386,7 @@ def fetch_team_users(gql_client: Client, team_name) -> list:
     while has_next_page:
         query = team_user_names_query(after_cursor, team_name)
         try:
-            data = gql_client.execute(query)
+            data = github_service.github_client_gql_api.execute(query)
         except Exception as err:
             print("Exception in fetch_team_users()")
             print(err)
@@ -405,7 +405,7 @@ def fetch_team_users(gql_client: Client, team_name) -> list:
     return team_user_name_list
 
 
-def fetch_team_repos(gql_client: Client, team_name) -> list:
+def fetch_team_repos(github_service: GithubService, team_name) -> list:
     """A wrapper function to run a GraphQL query to get the list of repo within in an organisation team
 
     Args:
@@ -421,7 +421,7 @@ def fetch_team_repos(gql_client: Client, team_name) -> list:
     while has_next_page:
         query = team_repos_query(after_cursor, team_name)
         try:
-            data = gql_client.execute(query)
+            data = github_service.github_client_gql_api.execute(query)
         except Exception as err:
             print("Exception in fetch_team_repos()")
             print(err)
@@ -453,7 +453,7 @@ class Repository:
         self.direct_members = y
 
 
-def fetch_repository(gql_client: Client, repository_name, outside_collaborators: list[str]) -> Repository:
+def fetch_repository(github_service: GithubService, repository_name, outside_collaborators: list[str]) -> Repository:
     """Fetches the repository info from GH
 
     Args:
@@ -463,21 +463,22 @@ def fetch_repository(gql_client: Client, repository_name, outside_collaborators:
         Repository: A repository object
     """
     repository_users_list = fetch_repository_users(
-        gql_client, repository_name, outside_collaborators)
+        github_service, repository_name, outside_collaborators)
     return Repository(repository_name, repository_users_list)
 
 
-def fetch_repositories(gql_client: Client, outside_collaborators: list[str], repo_issues_enabled) -> list:
+def fetch_repositories(github_service: GithubService, outside_collaborators: list[str], repo_issues_enabled) -> list:
     """Wrapper function to retrieve the repositories info ie name, users
 
     Returns:
         list: A list that contains all the repositories data ie name, users
     """
     repositories_list = []
-    repository_names_list = fetch_repo_names(gql_client, repo_issues_enabled)
+    repository_names_list = fetch_repo_names(
+        github_service, repo_issues_enabled)
     for repository_name in repository_names_list:
         repositories_list.append(fetch_repository(
-            gql_client, repository_name, outside_collaborators))
+            github_service, repository_name, outside_collaborators))
 
     return repositories_list
 
@@ -497,7 +498,7 @@ class team:
         self.team_id = d
 
 
-def fetch_team(gql_client: Client, team_name) -> team:
+def fetch_team(github_service: GithubService, team_name) -> team:
     """Fetches the team info from GH
 
     Args:
@@ -506,22 +507,22 @@ def fetch_team(gql_client: Client, team_name) -> team:
     Returns:
         team: A team object
     """
-    team_users_list = fetch_team_users(gql_client, team_name)
-    team_repos_list = fetch_team_repos(gql_client, team_name)
-    team_id = fetch_team_id(gql_client, team_name)
+    team_users_list = fetch_team_users(github_service, team_name)
+    team_repos_list = fetch_team_repos(github_service, team_name)
+    team_id = fetch_team_id(github_service, team_name)
     return team(team_name, team_users_list, team_repos_list, team_id)
 
 
-def fetch_teams(gql_client: Client) -> list:
+def fetch_teams(github_service: GithubService) -> list:
     """Wrapper function to retrieve the organisation team info ie name, users, repos
 
     Returns:
         list: A list that contains all the organisation teams data ie name, users, repos
     """
     teams_list = []
-    teams_names_list = fetch_team_names(gql_client)
+    teams_names_list = fetch_team_names(github_service)
     for team_name in teams_names_list:
-        teams_list.append(fetch_team(gql_client, team_name))
+        teams_list.append(fetch_team(github_service, team_name))
         # Delay for GH API
         time.sleep(1)
 
@@ -585,7 +586,7 @@ def get_user_permission(github_service: GithubService, repository_name, username
     users_permission = None
 
     try:
-        gh = github_service.client
+        gh = github_service.github_client_core_api
         repo = gh.get_repo(
             f"{github_service.organisation_name}/{repository_name}")
         user = gh.get_user(username)
@@ -605,7 +606,7 @@ def remove_user_from_team(github_service: GithubService, team_id, username):
         username (string): the name of the user
     """
     try:
-        gh = github_service.client
+        gh = github_service.github_client_core_api
         org = gh.get_organization("moj-analytical-services")
         gh_team = org.get_team(team_id)
         user = gh.get_user(username)
@@ -631,7 +632,7 @@ def add_user_to_team(github_service: GithubService, team_id, username):
         username (string): the name of the user
     """
     try:
-        gh = github_service.client
+        gh = github_service.github_client_core_api
         org = gh.get_organization("moj-analytical-services")
         gh_team = org.get_team(team_id)
         user = gh.get_user(username)
@@ -657,7 +658,7 @@ def create_new_team_with_repository(github_service: GithubService, repository_na
         team_name (string): the name of the team
     """
     try:
-        gh = github_service.client
+        gh = github_service.github_client_core_api
         repo = gh.get_repo(
             f"{github_service.organisation_name}/{repository_name}")
         org = gh.get_organization("moj-analytical-services")
@@ -689,7 +690,7 @@ def does_team_exist(github_service: GithubService, team_name):
     team_found = False
 
     try:
-        gh = github_service.client
+        gh = github_service.github_client_core_api
         org = gh.get_organization("moj-analytical-services")
         gh_teams = org.get_teams()
         for gh_team in gh_teams:
@@ -718,7 +719,7 @@ def change_team_repository_permission(github_service: GithubService, repository_
         permission = "push"
 
     try:
-        gh = github_service.client
+        gh = github_service.github_client_core_api
         repo = gh.get_repo(
             f"{github_service.organisation_name}/{repository_name}")
         org = gh.get_organization("moj-analytical-services")
@@ -805,7 +806,7 @@ def put_user_into_existing_team(
                 users_not_in_a_team.remove(username)
 
 
-def put_users_into_new_team(github_service: GithubService, gql_client: Client, repository_name, remaining_users):
+def put_users_into_new_team(github_service: GithubService, repository_name, remaining_users):
     """put users into a new team
 
     Args:
@@ -827,7 +828,7 @@ def put_users_into_new_team(github_service: GithubService, gql_client: Client, r
             if not does_team_exist(github_service, team_name):
                 create_new_team_with_repository(
                     github_service, repository_name, team_name)
-                team_id = fetch_team_id(gql_client, team_name)
+                team_id = fetch_team_id(github_service, team_name)
                 # Depends who adds the oauth_token to repo is added to every team
                 remove_user_from_team(github_service, team_id, "AntonyBishop")
                 remove_user_from_team(github_service, team_id, "nickwalt01")
@@ -835,7 +836,7 @@ def put_users_into_new_team(github_service: GithubService, gql_client: Client, r
                 remove_user_from_team(github_service,
                                       team_id, "moj-operations-engineering-bot")
 
-            team_id = fetch_team_id(gql_client, team_name)
+            team_id = fetch_team_id(github_service, team_name)
 
             change_team_repository_permission(github_service,
                                               repository_name, team_name, team_id, users_permission
@@ -846,18 +847,18 @@ def put_users_into_new_team(github_service: GithubService, gql_client: Client, r
                 username, repository_name)
 
 
-def run(github_service: GithubService, gql_client: Client, badly_named_repositories: list[str], repo_issues_enabled):
+def run(github_service: GithubService, badly_named_repositories: list[str], repo_issues_enabled):
     """A function for the main functionality of the script"""
 
     # Get the usernames of the outside collaborators
     outside_collaborators = github_service.get_outside_collaborators_login_names()
 
     # Get the MoJ organisation teams and users info
-    org_teams = fetch_teams(gql_client)
+    org_teams = fetch_teams(github_service)
 
     # Get the MoJ organisation repos and direct users
     org_repositories = fetch_repositories(
-        gql_client, outside_collaborators, repo_issues_enabled)
+        github_service.github_client_gql_api, outside_collaborators, repo_issues_enabled)
 
     # loop through each organisation repository
     for repository in org_repositories:
@@ -883,37 +884,19 @@ def run(github_service: GithubService, gql_client: Client, badly_named_repositor
                                             )
 
             put_users_into_new_team(
-                github_service, gql_client, repository.name, remaining_users)
+                github_service, repository.name, remaining_users)
 
 
 def main():
     if len(sys.argv) == 2:
-        # Get the GH Action token
         oauth_token = sys.argv[1]
     else:
         raise ValueError("Missing a script input parameter")
-
     github_service = GithubService(oauth_token, "moj-analytical-services")
-
     repo_issues_enabled = {}
-
-    # Setup a transport and client to interact with the GH GraphQL API
-    try:
-        transport = AIOHTTPTransport(
-            url="https://api.github.com/graphql",
-            headers={"Authorization": "Bearer {}".format(oauth_token)},
-        )
-    except Exception:
-        print_stack_trace("Exception: Problem with the API URL or GH Token")
-
-    try:
-        gql_client = Client(transport=transport,
-                            fetch_schema_from_transport=False)
-    except Exception:
-        print_stack_trace("Exception: Problem with the Client.")
     badly_named_repositories = []
     print("Start")
-    run(github_service, gql_client, badly_named_repositories, repo_issues_enabled)
+    run(github_service, badly_named_repositories, repo_issues_enabled)
     print("Finished")
 
 
