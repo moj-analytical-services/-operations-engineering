@@ -66,3 +66,10 @@ class GithubService:
             f"Removing user {user_name} from repository {repository_name}")
         self.github_client_core_api.get_repo(
             f"{self.organisation_name}/{repository_name}").remove_from_collaborators(user_name)
+
+    def get_user_permission_for_repository(self, user_name: str, repository_name: str):
+        logging.info(
+            f"Getting permissions for user {user_name} from repository {repository_name}")
+        user = self.github_client_core_api.get_user(user_name)
+        return self.github_client_core_api.get_repo(
+            f"{self.organisation_name}/{repository_name}").get_collaborator_permission(user)
