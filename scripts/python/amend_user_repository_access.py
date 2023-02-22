@@ -858,7 +858,7 @@ def run(github_service: GithubService, badly_named_repositories: list[str], repo
 
     # Get the MoJ organisation repos and direct users
     org_repositories = fetch_repositories(
-        github_service.github_client_gql_api, outside_collaborators, repo_issues_enabled)
+        github_service, outside_collaborators, repo_issues_enabled)
 
     # loop through each organisation repository
     for repository in org_repositories:
