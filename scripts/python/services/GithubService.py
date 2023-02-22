@@ -25,7 +25,7 @@ class GithubService:
             self.organisation_name).get_outside_collaborators() or []
         return [outside_collaborator.login for outside_collaborator in outside_collaborators]
 
-    def close_expired_issues(self, repository_name: str):
+    def close_expired_issues(self, repository_name: str) -> None:
         logging.info(f"Closing expired issues for {repository_name}")
         issues = self.github_client_core_api.get_repo(
             f"{self.organisation_name}/{repository_name}").get_issues() or []
@@ -34,13 +34,13 @@ class GithubService:
                 issue.edit(state="closed")
                 logging.info(f"Closing issue in {repository_name}")
 
-    def __is_expired(self, issue: Issue):
+    def __is_expired(self, issue: Issue) -> bool:
         grace_period = issue.created_at + timedelta(days=45)
         return (issue.title == self.USER_ACCESS_REMOVED_ISSUE_TITLE
                 and issue.state == "open"
                 and grace_period < datetime.now())
 
-    def create_an_access_removed_issue_for_user_in_repository(self, user_name: str, repository_name: str):
+    def create_an_access_removed_issue_for_user_in_repository(self, user_name: str, repository_name: str) -> None:
         logging.info(
             f"Creating an access removed issue for user {user_name} in repository {repository_name}")
         self.github_client_core_api.get_repo(f"{self.organisation_name}/{repository_name}").create_issue(
@@ -61,15 +61,21 @@ class GithubService:
         """).strip("\n")
         )
 
-    def remove_user_from_repository(self, user_name: str, repository_name: str):
+    def remove_user_from_repository(self, user_name: str, repository_name: str) -> None:
         logging.info(
             f"Removing user {user_name} from repository {repository_name}")
         self.github_client_core_api.get_repo(
             f"{self.organisation_name}/{repository_name}").remove_from_collaborators(user_name)
 
-    def get_user_permission_for_repository(self, user_name: str, repository_name: str):
+    def get_user_permission_for_repository(self, user_name: str, repository_name: str) -> str:
         logging.info(
             f"Getting permissions for user {user_name} from repository {repository_name}")
         user = self.github_client_core_api.get_user(user_name)
         return self.github_client_core_api.get_repo(
             f"{self.organisation_name}/{repository_name}").get_collaborator_permission(user)
+
+    def remove_user_from_team(self, user_name: str, team_id: int) -> None:
+        logging.info(f"Removing user {user_name} from team {team_id}")
+        user = self.github_client_core_api.get_user(user_name)
+        self.github_client_core_api.get_organization(self.organisation_name).get_team(team_id).remove_membership(
+            user)
