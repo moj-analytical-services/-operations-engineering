@@ -212,7 +212,8 @@ class TestGithubServiceGetUserPermissionForRepository(unittest.TestCase):
         github_service = GithubService("", ORGANISATION_NAME)
         github_service.get_user_permission_for_repository(
             "test_user", "test_repository")
-        github_service.github_client_core_api.get_user.assert_has_calls([call('test_user')])
+        github_service.github_client_core_api.get_user.assert_has_calls([
+                                                                        call('test_user')])
         github_service.github_client_core_api.get_repo.assert_has_calls([
             call('moj-analytical-services/test_repository'),
             call().get_collaborator_permission('mock_user')

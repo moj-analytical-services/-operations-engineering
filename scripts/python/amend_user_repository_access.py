@@ -762,7 +762,8 @@ def put_user_into_existing_team(
     elif len(users_not_in_a_team) == 0:
         pass
     else:
-        users_permission = github_service.get_user_permission_for_repository(username, repository_name)
+        users_permission = github_service.get_user_permission_for_repository(
+            username, repository_name)
 
         # create a team name that has the same permissions as the user
         temp_name = repository_name + "-" + users_permission + "-team"
@@ -793,7 +794,8 @@ def put_users_into_new_team(github_service: GithubService, repository_name, rema
         return
     else:
         for username in remaining_users:
-            users_permission = github_service.get_user_permission_for_repository(username, repository_name)
+            users_permission = github_service.get_user_permission_for_repository(
+                username, repository_name)
 
             temp_name = repository_name + "-" + users_permission + "-team"
             team_name = correct_team_name(temp_name)
