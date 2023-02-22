@@ -228,5 +228,29 @@ class TestGithubServiceGetUserPermissionForRepository(unittest.TestCase):
             "test_repository")
 
 
+@patch("gql.transport.aiohttp.AIOHTTPTransport.__new__", new=MagicMock)
+@patch("gql.Client.__new__", new=MagicMock)
+@patch("github.Github.__new__")
+class TestGithubServiceRemoveUserFromTeam(unittest.TestCase):
+    def test_calls_downstream_services(self, mock_github_client_core_api):
+        mock_github_client_core_api.return_value.get_user.return_value = "mock_user"
+        github_service = GithubService("", ORGANISATION_NAME)
+        github_service.remove_user_from_team("test_user", "test_repository")
+        github_service.github_client_core_api.get_user.assert_has_calls([
+                                                                        call('test_user')])
+        github_service.github_client_core_api.get_organization.assert_has_calls([
+            call('moj-analytical-services'),
+            call().get_team('test_repository'),
+            call().get_team().remove_membership('mock_user')
+        ])
+
+    def test_throws_exception_when_client_throws_exception(self, mock_github_client_core_api):
+        mock_github_client_core_api.return_value.get_organization = MagicMock(
+            side_effect=ConnectionError)
+        github_service = GithubService("", ORGANISATION_NAME)
+        self.assertRaises(
+            ConnectionError, github_service.remove_user_from_team, "test_user", "test_repository")
+
+
 if __name__ == "__main__":
     unittest.main()
