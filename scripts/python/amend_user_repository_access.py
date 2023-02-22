@@ -573,32 +573,6 @@ def remove_users_with_duplicate_access(github_service: GithubService, repo_issue
                     users_not_in_a_team.remove(username)
 
 
-def remove_user_from_team(github_service: GithubService, team_id, username):
-    """remove a user from a team
-
-    Args:
-        team_id (int): the GH ID of the team
-        username (string): the name of the user
-    """
-    try:
-        gh = github_service.github_client_core_api
-        org = gh.get_organization("moj-analytical-services")
-        gh_team = org.get_team(team_id)
-        user = gh.get_user(username)
-        gh_team.remove_membership(user)
-        # Delay for GH API
-        time.sleep(5)
-        print("Remove user " + username + " from team " + team_id.__str__())
-    except Exception:
-        message = (
-            "Warning: Exception in removing user "
-            + username
-            + " from team "
-            + team_id.__str__()
-        )
-        print_stack_trace(message)
-
-
 def add_user_to_team(github_service: GithubService, team_id, username):
     """add a user to a team
 
@@ -805,11 +779,10 @@ def put_users_into_new_team(github_service: GithubService, repository_name, rema
                     github_service, repository_name, team_name)
                 team_id = fetch_team_id(github_service, team_name)
                 # Depends who adds the oauth_token to repo is added to every team
-                remove_user_from_team(github_service, team_id, "AntonyBishop")
-                remove_user_from_team(github_service, team_id, "nickwalt01")
-                remove_user_from_team(github_service, team_id, "ben-al")
-                remove_user_from_team(github_service,
-                                      team_id, "moj-operations-engineering-bot")
+                github_service.remove_user_from_team("AntonyBishop", team_id)
+                github_service.remove_user_from_team("nickwalt01", team_id)
+                github_service.remove_user_from_team("ben-al", team_id)
+                github_service.remove_user_from_team("moj-operations-engineering-bot", team_id)
 
             team_id = fetch_team_id(github_service, team_name)
 
