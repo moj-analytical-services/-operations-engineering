@@ -311,9 +311,9 @@ class TestGithubServiceTeamExists(unittest.TestCase):
     mock_super_team = None
 
     def setUp(self):
-        mock_unicorn_team, mock_super_team = Mock(Team), Mock(Team)
-        mock_unicorn_team.name = "unicorn,team"  # `name` is a reserved value in `Mock()` constructors. So need to mock the values manually.
-        mock_super_team.name = "super/team"
+        self.mock_unicorn_team, self.mock_super_team = Mock(Team), Mock(Team)
+        self.mock_unicorn_team.name = "unicorn,team"  # `name` is a reserved value in `Mock()` constructors. So need to mock the values manually.
+        self.mock_super_team.name = "super/team"
 
     def test_calls_downstream_services(self, mock_github_client_core_api):
         mock_github_client_core_api.return_value.get_organization().get_teams.return_value = []
@@ -324,22 +324,16 @@ class TestGithubServiceTeamExists(unittest.TestCase):
         ])
 
     def test_returns_true_when_team_name_exists(self, mock_github_client_core_api):
-        mock_unicorn_team, mock_super_team = Mock(Team), Mock(Team)
-        mock_unicorn_team.name = "unicorn,team"
-        mock_super_team.name = "super/team"
         mock_github_client_core_api.return_value.get_organization().get_teams.return_value = [
-            mock_unicorn_team,
-            mock_super_team,
+            self.mock_unicorn_team,
+            self.mock_super_team,
         ]
         self.assertTrue(GithubService("", ORGANISATION_NAME).team_exists("unicorn,team"))
 
     def test_returns_false_when_team_does_not_exist(self, mock_github_client_core_api):
-        mock_unicorn_team, mock_super_team = Mock(Team), Mock(Team)
-        mock_unicorn_team.name = "unicorn,team"
-        mock_super_team.name = "super/team"
         mock_github_client_core_api.return_value.get_organization().get_teams.return_value = [
-            mock_unicorn_team,
-            mock_super_team,
+            self.mock_unicorn_team,
+            self.mock_super_team,
         ]
         self.assertFalse(GithubService("", ORGANISATION_NAME).team_exists("THIS_TEAM_DOES_NOT_EXIST!"))
 
