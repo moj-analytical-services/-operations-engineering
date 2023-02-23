@@ -3,6 +3,7 @@ from datetime import datetime, timedelta
 from unittest.mock import call, MagicMock, Mock, patch
 
 from github.NamedUser import NamedUser
+from github.Team import Team
 
 from .GithubService import GithubService
 
@@ -300,6 +301,58 @@ class TestGithubServiceCreateNewTeamWithRepository(unittest.TestCase):
         github_service = GithubService("", ORGANISATION_NAME)
         self.assertRaises(
             ConnectionError, github_service.create_new_team_with_repository, "test_team", "test_repository")
+
+
+@patch("gql.transport.aiohttp.AIOHTTPTransport.__new__", new=MagicMock)
+@patch("gql.Client.__new__", new=MagicMock)
+@patch("github.Github.__new__")
+class TestGithubServiceTeamExists(unittest.TestCase):
+    mock_unicorn_team = None
+    mock_super_team = None
+
+    def setUp(self):
+        mock_unicorn_team, mock_super_team = Mock(Team), Mock(Team)
+        mock_unicorn_team.name = "unicorn,team"  # `name` is a reserved value in `Mock()` constructors. So need to mock the values manually.
+        mock_super_team.name = "super/team"
+
+    def test_calls_downstream_services(self, mock_github_client_core_api):
+        mock_github_client_core_api.return_value.get_organization().get_teams.return_value = []
+        github_service = GithubService("", ORGANISATION_NAME)
+        github_service.team_exists("test_team")
+        github_service.github_client_core_api.get_organization.assert_has_calls([
+            call(), call('moj-analytical-services'), call().get_teams()
+        ])
+
+    def test_returns_true_when_team_name_exists(self, mock_github_client_core_api):
+        mock_unicorn_team, mock_super_team = Mock(Team), Mock(Team)
+        mock_unicorn_team.name = "unicorn,team"
+        mock_super_team.name = "super/team"
+        mock_github_client_core_api.return_value.get_organization().get_teams.return_value = [
+            mock_unicorn_team,
+            mock_super_team,
+        ]
+        self.assertTrue(GithubService("", ORGANISATION_NAME).team_exists("unicorn,team"))
+
+    def test_returns_false_when_team_does_not_exist(self, mock_github_client_core_api):
+        mock_unicorn_team, mock_super_team = Mock(Team), Mock(Team)
+        mock_unicorn_team.name = "unicorn,team"
+        mock_super_team.name = "super/team"
+        mock_github_client_core_api.return_value.get_organization().get_teams.return_value = [
+            mock_unicorn_team,
+            mock_super_team,
+        ]
+        self.assertFalse(GithubService("", ORGANISATION_NAME).team_exists("THIS_TEAM_DOES_NOT_EXIST!"))
+
+    def test_returns_false_when_teams_return_none(self, mock_github_client_core_api):
+        mock_github_client_core_api.return_value.get_organization().get_teams.return_value = None
+        self.assertFalse(GithubService("", ORGANISATION_NAME).team_exists("test"))
+
+    def test_throws_exception_when_client_throws_exception(self, mock_github_client_core_api):
+        mock_github_client_core_api.return_value.get_organization = MagicMock(
+            side_effect=ConnectionError)
+        github_service = GithubService("", ORGANISATION_NAME)
+        self.assertRaises(
+            ConnectionError, github_service.team_exists, "test_team")
 
 
 if __name__ == "__main__":
