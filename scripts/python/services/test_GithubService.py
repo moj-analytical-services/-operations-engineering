@@ -283,7 +283,8 @@ class TestGithubServiceCreateNewTeamWithRepository(unittest.TestCase):
     def test_calls_downstream_services(self, mock_github_client_core_api):
         mock_github_client_core_api.return_value.get_repo.return_value = "mock_repo"
         github_service = GithubService("", ORGANISATION_NAME)
-        github_service.create_new_team_with_repository("test_team", "test_repository")
+        github_service.create_new_team_with_repository(
+            "test_team", "test_repository")
         github_service.github_client_core_api.get_repo.assert_has_calls([
             call('moj-analytical-services/test_repository')
         ])

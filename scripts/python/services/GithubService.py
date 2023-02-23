@@ -87,8 +87,10 @@ class GithubService:
             self.organisation_name).get_team(team_id).add_membership(user)
 
     def create_new_team_with_repository(self, team_name: str, repository_name: str) -> None:
-        logging.info(f"Creating team {team_name} for repository {repository_name}")
-        repo = self.github_client_core_api.get_repo(f"{self.organisation_name}/{repository_name}")
+        logging.info(
+            f"Creating team {team_name} for repository {repository_name}")
+        repo = self.github_client_core_api.get_repo(
+            f"{self.organisation_name}/{repository_name}")
         self.github_client_core_api.get_organization(self.organisation_name).create_team(
             team_name,
             [repo],

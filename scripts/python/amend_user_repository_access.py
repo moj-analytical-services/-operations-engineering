@@ -722,7 +722,8 @@ def put_users_into_new_team(github_service: GithubService, repository_name, rema
             team_name = correct_team_name(temp_name)
 
             if not does_team_exist(github_service, team_name):
-                github_service.create_new_team_with_repository(team_name, repository_name)
+                github_service.create_new_team_with_repository(
+                    team_name, repository_name)
                 team_id = fetch_team_id(github_service, team_name)
                 # Depends who adds the oauth_token to repo is added to every team
                 github_service.remove_user_from_team("AntonyBishop", team_id)
