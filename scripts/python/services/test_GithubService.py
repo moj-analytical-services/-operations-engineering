@@ -276,5 +276,31 @@ class TestGithubServiceAddUserToTeam(unittest.TestCase):
             ConnectionError, github_service.add_user_to_team, "test_user", 1)
 
 
+@patch("gql.transport.aiohttp.AIOHTTPTransport.__new__", new=MagicMock)
+@patch("gql.Client.__new__", new=MagicMock)
+@patch("github.Github.__new__")
+class TestGithubServiceCreateNewTeamWithRepository(unittest.TestCase):
+    def test_calls_downstream_services(self, mock_github_client_core_api):
+        mock_github_client_core_api.return_value.get_repo.return_value = "mock_repo"
+        github_service = GithubService("", ORGANISATION_NAME)
+        github_service.create_new_team_with_repository(
+            "test_team", "test_repository")
+        github_service.github_client_core_api.get_repo.assert_has_calls([
+            call('moj-analytical-services/test_repository')
+        ])
+        github_service.github_client_core_api.get_organization.assert_has_calls([
+            call('moj-analytical-services'),
+            call().create_team('test_team', ['mock_repo'], '', 'closed',
+                               'Automated generated team to grant users access to this repository')
+        ])
+
+    def test_throws_exception_when_client_throws_exception(self, mock_github_client_core_api):
+        mock_github_client_core_api.return_value.get_organization = MagicMock(
+            side_effect=ConnectionError)
+        github_service = GithubService("", ORGANISATION_NAME)
+        self.assertRaises(
+            ConnectionError, github_service.create_new_team_with_repository, "test_team", "test_repository")
+
+
 if __name__ == "__main__":
     unittest.main()
