@@ -83,4 +83,5 @@ class GithubService:
     def add_user_to_team(self, user_name: str, team_id: int) -> None:
         logging.info(f"Adding user {user_name} from team {team_id}")
         user = self.github_client_core_api.get_user(user_name)
-        self.github_client_core_api.get_organization(self.organisation_name).get_team(team_id).add_membership(user)
+        self.github_client_core_api.get_organization(
+            self.organisation_name).get_team(team_id).add_membership(user)

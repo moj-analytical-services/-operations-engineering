@@ -572,6 +572,7 @@ def remove_users_with_duplicate_access(github_service: GithubService, repo_issue
                     # The user is in a team
                     users_not_in_a_team.remove(username)
 
+
 def create_new_team_with_repository(github_service: GithubService, repository_name, team_name):
     """create a new team and attach to a repository
 
