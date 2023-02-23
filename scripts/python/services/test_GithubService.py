@@ -312,7 +312,8 @@ class TestGithubServiceTeamExists(unittest.TestCase):
 
     def setUp(self):
         self.mock_unicorn_team, self.mock_super_team = Mock(Team), Mock(Team)
-        self.mock_unicorn_team.name = "unicorn,team"  # `name` is a reserved value in `Mock()` constructors. So need to mock the values manually.
+        # `name` is a reserved value in `Mock()` constructors. So need to mock the values manually.
+        self.mock_unicorn_team.name = "unicorn,team"
         self.mock_super_team.name = "super/team"
 
     def test_calls_downstream_services(self, mock_github_client_core_api):
@@ -328,18 +329,21 @@ class TestGithubServiceTeamExists(unittest.TestCase):
             self.mock_unicorn_team,
             self.mock_super_team,
         ]
-        self.assertTrue(GithubService("", ORGANISATION_NAME).team_exists("unicorn,team"))
+        self.assertTrue(GithubService(
+            "", ORGANISATION_NAME).team_exists("unicorn,team"))
 
     def test_returns_false_when_team_does_not_exist(self, mock_github_client_core_api):
         mock_github_client_core_api.return_value.get_organization().get_teams.return_value = [
             self.mock_unicorn_team,
             self.mock_super_team,
         ]
-        self.assertFalse(GithubService("", ORGANISATION_NAME).team_exists("THIS_TEAM_DOES_NOT_EXIST!"))
+        self.assertFalse(GithubService("", ORGANISATION_NAME).team_exists(
+            "THIS_TEAM_DOES_NOT_EXIST!"))
 
     def test_returns_false_when_teams_return_none(self, mock_github_client_core_api):
         mock_github_client_core_api.return_value.get_organization().get_teams.return_value = None
-        self.assertFalse(GithubService("", ORGANISATION_NAME).team_exists("test"))
+        self.assertFalse(GithubService(
+            "", ORGANISATION_NAME).team_exists("test"))
 
     def test_throws_exception_when_client_throws_exception(self, mock_github_client_core_api):
         mock_github_client_core_api.return_value.get_organization = MagicMock(
