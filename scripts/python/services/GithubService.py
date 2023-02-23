@@ -98,3 +98,9 @@ class GithubService:
             "closed",
             "Automated generated team to grant users access to this repository",
         )
+
+    def team_exists(self, team_name) -> bool:
+        logging.info(f"Checking if team {team_name} exists")
+        github_teams = self.github_client_core_api.get_organization(
+            self.organisation_name).get_teams() or []
+        return any(github_team.name == team_name for github_team in github_teams)
