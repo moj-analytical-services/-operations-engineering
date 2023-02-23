@@ -573,33 +573,6 @@ def remove_users_with_duplicate_access(github_service: GithubService, repo_issue
                     users_not_in_a_team.remove(username)
 
 
-def create_new_team_with_repository(github_service: GithubService, repository_name, team_name):
-    """create a new team and attach to a repository
-
-    Args:
-        repository_name (string): the name of the repository to attach to
-        team_name (string): the name of the team
-    """
-    try:
-        gh = github_service.github_client_core_api
-        repo = gh.get_repo(
-            f"{github_service.organisation_name}/{repository_name}")
-        org = gh.get_organization("moj-analytical-services")
-        org.create_team(
-            team_name,
-            [repo],
-            "",
-            "closed",
-            "Automated generated team to grant users access to this repository",
-        )
-        # Delay for GH API
-        time.sleep(5)
-        print("Creating new team " + team_name)
-    except Exception:
-        message = "Warning: Exception in creating a team " + team_name
-        print_stack_trace(message)
-
-
 def does_team_exist(github_service: GithubService, team_name):
     """Check if a team exists in the organization
 
@@ -749,8 +722,7 @@ def put_users_into_new_team(github_service: GithubService, repository_name, rema
             team_name = correct_team_name(temp_name)
 
             if not does_team_exist(github_service, team_name):
-                create_new_team_with_repository(
-                    github_service, repository_name, team_name)
+                github_service.create_new_team_with_repository(team_name, repository_name)
                 team_id = fetch_team_id(github_service, team_name)
                 # Depends who adds the oauth_token to repo is added to every team
                 github_service.remove_user_from_team("AntonyBishop", team_id)
