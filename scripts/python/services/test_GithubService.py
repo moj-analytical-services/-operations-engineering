@@ -273,7 +273,7 @@ class TestGithubServiceAddUserToTeam(unittest.TestCase):
             side_effect=ConnectionError)
         github_service = GithubService("", ORGANISATION_NAME)
         self.assertRaises(
-            ConnectionError, github_service.remove_user_from_team, "test_user", 1)
+            ConnectionError, github_service.add_user_to_team, "test_user", 1)
 
 
 if __name__ == "__main__":
