@@ -1,7 +1,5 @@
 import unittest
-from calendar import timegm
 from datetime import datetime, timedelta
-from time import gmtime
 from unittest.mock import call, MagicMock, Mock, patch
 
 from freezegun import freeze_time
@@ -32,7 +30,7 @@ class TestRetriesGithubRateLimitExceptionAtNextResetOnce(unittest.TestCase):
         mock_function = Mock(
             side_effect=[RateLimitExceededException(Mock(), Mock(), Mock()), Mock()])
         mock_github_client = Mock(Github)
-        mock_github_client.get_rate_limit().core.reset = timegm(gmtime())
+        mock_github_client.get_rate_limit().core.reset = datetime.now()
         mock_github_service = Mock(
             GithubService, github_client_core_api=mock_github_client)
         retries_github_rate_limit_exception_at_next_reset_once(
@@ -47,7 +45,7 @@ class TestRetriesGithubRateLimitExceptionAtNextResetOnce(unittest.TestCase):
             RateLimitExceededException(Mock(), Mock(), Mock())]
         )
         mock_github_client = Mock(Github)
-        mock_github_client.get_rate_limit().core.reset = timegm(gmtime())
+        mock_github_client.get_rate_limit().core.reset = datetime.now()
         mock_github_service = Mock(
             GithubService, github_client_core_api=mock_github_client)
         self.assertRaises(RateLimitExceededException,
