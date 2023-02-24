@@ -17,11 +17,12 @@ def retries_github_rate_limit_exception_at_next_reset_once(func: Callable) -> Ca
         try:
             return func(*args, **kwargs)
         except RateLimitExceededException:
-            logging.warning("Caught RateLimitExceededException, retrying calls when rate limit resets.")
+            logging.warning(
+                "Caught RateLimitExceededException, retrying calls when rate limit resets.")
             core_api_reset_timestamp = github_client_core_api.get_rate_limit().core.reset
             now_timestamp = timegm(gmtime())
             time_until_core_api_rate_limit_resets = (
-                    core_api_reset_timestamp - now_timestamp) if core_api_reset_timestamp > now_timestamp else 0
+                core_api_reset_timestamp - now_timestamp) if core_api_reset_timestamp > now_timestamp else 0
             sleep(time_until_core_api_rate_limit_resets)
             return func(*args, **kwargs)
 

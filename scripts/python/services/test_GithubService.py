@@ -20,19 +20,25 @@ class TestRetriesGithubRateLimitExceptionAtNextResetOnce(unittest.TestCase):
     def test_function_is_only_called_once_with_arguments(self):
         mock_function = Mock()
         mock_github_client = Mock(Github)
-        mock_github_service = Mock(GithubService, github_client_core_api=mock_github_client)
-        retries_github_rate_limit_exception_at_next_reset_once(mock_function)(mock_github_service, "test_arg")
+        mock_github_service = Mock(
+            GithubService, github_client_core_api=mock_github_client)
+        retries_github_rate_limit_exception_at_next_reset_once(
+            mock_function)(mock_github_service, "test_arg")
         mock_function.assert_has_calls(
             [call(mock_github_service, "test_arg")])
 
     @freeze_time("2023-02-01")
     def test_function_is_called_twice_when_rate_limit_exception_raised_once(self):
-        mock_function = Mock(side_effect=[RateLimitExceededException(Mock(), Mock(), Mock()), Mock()])
+        mock_function = Mock(
+            side_effect=[RateLimitExceededException(Mock(), Mock(), Mock()), Mock()])
         mock_github_client = Mock(Github)
         mock_github_client.get_rate_limit().core.reset = timegm(gmtime())
-        mock_github_service = Mock(GithubService, github_client_core_api=mock_github_client)
-        retries_github_rate_limit_exception_at_next_reset_once(mock_function)(mock_github_service, "test_arg")
-        mock_function.assert_has_calls([call(mock_github_service, 'test_arg')], [call(mock_github_service, 'test_arg')])
+        mock_github_service = Mock(
+            GithubService, github_client_core_api=mock_github_client)
+        retries_github_rate_limit_exception_at_next_reset_once(
+            mock_function)(mock_github_service, "test_arg")
+        mock_function.assert_has_calls([call(mock_github_service, 'test_arg')], [
+                                       call(mock_github_service, 'test_arg')])
 
     @freeze_time("2023-02-01")
     def test_rate_limit_exception_raised_when_rate_limit_exception_raised_twice(self):
@@ -42,9 +48,11 @@ class TestRetriesGithubRateLimitExceptionAtNextResetOnce(unittest.TestCase):
         )
         mock_github_client = Mock(Github)
         mock_github_client.get_rate_limit().core.reset = timegm(gmtime())
-        mock_github_service = Mock(GithubService, github_client_core_api=mock_github_client)
+        mock_github_service = Mock(
+            GithubService, github_client_core_api=mock_github_client)
         self.assertRaises(RateLimitExceededException,
-                          retries_github_rate_limit_exception_at_next_reset_once(mock_function), mock_github_service,
+                          retries_github_rate_limit_exception_at_next_reset_once(
+                              mock_function), mock_github_service,
                           "test_arg")
 
 
