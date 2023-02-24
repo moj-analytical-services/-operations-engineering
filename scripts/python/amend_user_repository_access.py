@@ -572,6 +572,7 @@ def remove_users_with_duplicate_access(github_service: GithubService, repo_issue
                     # The user is in a team
                     users_not_in_a_team.remove(username)
 
+
 def correct_team_name(team_name):
     """GH team names use a slug name. This
     swaps ., _, , with a - and lower cases
@@ -672,7 +673,8 @@ def put_users_into_new_team(github_service: GithubService, repository_name, rema
 
             team_id = fetch_team_id(github_service, team_name)
 
-            github_service.amend_team_permissions_for_repository(team_id, users_permission, repository_name)
+            github_service.amend_team_permissions_for_repository(
+                team_id, users_permission, repository_name)
 
             github_service.add_user_to_team(username, team_id)
             github_service.remove_user_from_repository(

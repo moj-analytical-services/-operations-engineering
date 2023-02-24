@@ -106,7 +106,8 @@ class GithubService:
         return any(github_team.name == team_name for github_team in github_teams)
 
     def amend_team_permissions_for_repository(self, team_id: int, permission: str, repository_name: str) -> None:
-        logging.info(f"Amending permissions for team {team_id} in repository {repository_name}")
+        logging.info(
+            f"Amending permissions for team {team_id} in repository {repository_name}")
         if permission == "read":
             permission = "pull"
         elif permission == "write":

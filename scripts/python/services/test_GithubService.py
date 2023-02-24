@@ -360,20 +360,23 @@ class TestGithubServiceAmendTeamPermissionsForRepository(unittest.TestCase):
     def test_calls_downstream_services(self, mock_github_client_core_api):
         mock_github_client_core_api.return_value.get_repo.return_value = "mock_test_repository"
         github_service = GithubService("", ORGANISATION_NAME)
-        github_service.amend_team_permissions_for_repository(1, "test_permission", "test_repository")
+        github_service.amend_team_permissions_for_repository(
+            1, "test_permission", "test_repository")
         github_service.github_client_core_api.get_repo.assert_has_calls([
             call('moj-analytical-services/test_repository')
         ])
         github_service.github_client_core_api.get_organization.assert_has_calls([
             call('moj-analytical-services'),
             call().get_team(1),
-            call().get_team().update_team_repository('mock_test_repository', 'test_permission')
+            call().get_team().update_team_repository(
+                'mock_test_repository', 'test_permission')
         ])
 
     def test_updates_permission_to_pull_when_permission_read(self, mock_github_client_core_api):
         mock_github_client_core_api.return_value.get_repo.return_value = "mock_test_repository"
         github_service = GithubService("", ORGANISATION_NAME)
-        github_service.amend_team_permissions_for_repository(1, "read", "test_repository")
+        github_service.amend_team_permissions_for_repository(
+            1, "read", "test_repository")
         github_service.github_client_core_api.get_organization.assert_has_calls([
             call('moj-analytical-services'),
             call().get_team(1),
@@ -383,7 +386,8 @@ class TestGithubServiceAmendTeamPermissionsForRepository(unittest.TestCase):
     def test_updates_permission_to_push_when_permission_write(self, mock_github_client_core_api):
         mock_github_client_core_api.return_value.get_repo.return_value = "mock_test_repository"
         github_service = GithubService("", ORGANISATION_NAME)
-        github_service.amend_team_permissions_for_repository(1, "write", "test_repository")
+        github_service.amend_team_permissions_for_repository(
+            1, "write", "test_repository")
         github_service.github_client_core_api.get_organization.assert_has_calls([
             call('moj-analytical-services'),
             call().get_team(1),
