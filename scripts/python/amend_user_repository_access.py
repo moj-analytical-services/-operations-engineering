@@ -572,41 +572,6 @@ def remove_users_with_duplicate_access(github_service: GithubService, repo_issue
                     # The user is in a team
                     users_not_in_a_team.remove(username)
 
-
-def change_team_repository_permission(github_service: GithubService, repository_name, team_name, team_id, permission):
-    """changes the team permissions on a repository
-
-    Args:
-        repository_name (string): the name of the repository
-        team_name (string): the name of the team
-        team_id (int): the GH id of the team
-        permission (string): the permission of the team
-    """
-    if permission == "read":
-        permission = "pull"
-    elif permission == "write":
-        permission = "push"
-
-    try:
-        gh = github_service.github_client_core_api
-        repo = gh.get_repo(
-            f"{github_service.organisation_name}/{repository_name}")
-        org = gh.get_organization("moj-analytical-services")
-        gh_team = org.get_team(team_id)
-        gh_team.update_team_repository(repo, permission)
-        # Delay for GH API
-        time.sleep(5)
-        print("Change team " + team_name + " repo permission to " + permission)
-    except Exception:
-        message = (
-            "Warning: Exception in changing team "
-            + team_name
-            + " permission on repository "
-            + repository_name
-        )
-        print_stack_trace(message)
-
-
 def correct_team_name(team_name):
     """GH team names use a slug name. This
     swaps ., _, , with a - and lower cases
@@ -707,9 +672,7 @@ def put_users_into_new_team(github_service: GithubService, repository_name, rema
 
             team_id = fetch_team_id(github_service, team_name)
 
-            change_team_repository_permission(github_service,
-                                              repository_name, team_name, team_id, users_permission
-                                              )
+            github_service.amend_team_permissions_for_repository(team_id, users_permission, repository_name)
 
             github_service.add_user_to_team(username, team_id)
             github_service.remove_user_from_repository(

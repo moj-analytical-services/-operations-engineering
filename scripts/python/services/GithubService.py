@@ -104,3 +104,14 @@ class GithubService:
         github_teams = self.github_client_core_api.get_organization(
             self.organisation_name).get_teams() or []
         return any(github_team.name == team_name for github_team in github_teams)
+
+    def amend_team_permissions_for_repository(self, team_id: int, permission: str, repository_name: str) -> None:
+        logging.info(f"Amending permissions for team {team_id} in repository {repository_name}")
+        if permission == "read":
+            permission = "pull"
+        elif permission == "write":
+            permission = "push"
+        repo = self.github_client_core_api.get_repo(
+            f"{self.organisation_name}/{repository_name}")
+        self.github_client_core_api.get_organization("moj-analytical-services").get_team(
+            team_id).update_team_repository(repo, permission)
