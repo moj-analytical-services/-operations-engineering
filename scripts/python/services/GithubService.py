@@ -13,6 +13,18 @@ from gql.transport.aiohttp import AIOHTTPTransport
 
 def retries_github_rate_limit_exception_at_next_reset_once(func: Callable) -> Callable:
     def decorator(*args, **kwargs):
+        """
+        A decorator to retry the method when rate limiting for GitHub resets if the method fails due to RateLimitExceededException.
+
+        WARNING: Since this decorator retries methods, ensure that the method being decorated is idempotent
+         or contains only one non-idempotent method at the end of a call chain to GitHub.
+
+         Example of idempotent methods are:
+            - Retrieving data
+         Example of (potentially) non-idempotent methods are:
+            - Deleting data
+            - Updating data
+        """
         github_client_core_api = args[0].github_client_core_api
         try:
             return func(*args, **kwargs)
