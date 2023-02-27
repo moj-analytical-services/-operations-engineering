@@ -164,7 +164,7 @@ class GithubService:
     def get_team_id_from_team_name(self, team_name: str) -> int:
         logging.info(f"Getting team ID for team name {team_name}")
         data = self.github_client_gql_api.execute(gql("""
-            query {
+            query($organisation_name: String!, $team_name: String!) {
                 organization(login: $organisation_name) {
                     team(slug: $team_name) {
                         databaseId
