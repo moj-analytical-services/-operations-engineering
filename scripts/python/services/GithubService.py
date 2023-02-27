@@ -7,7 +7,7 @@ from typing import Callable
 
 from github import Github, RateLimitExceededException
 from github.Issue import Issue
-from gql import Client
+from gql import Client, gql
 from gql.transport.aiohttp import AIOHTTPTransport
 
 
@@ -160,3 +160,16 @@ class GithubService:
             f"{self.organisation_name}/{repository_name}")
         self.github_client_core_api.get_organization(self.organisation_name).get_team(
             team_id).update_team_repository(repo, permission)
+
+    def get_team_id_from_team_name(self, team_name: str) -> int:
+        data = self.github_client_gql_api.execute(gql("""
+            query {
+                organization(login: $organisation_name) {
+                    team(slug: $team_name) {
+                        databaseId
+                    }
+                }
+            }
+        """), variable_values={"organisation_name": self.organisation_name, "team_name": team_name})
+
+        return data["organization"]["team"]["databaseId"]

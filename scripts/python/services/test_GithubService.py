@@ -446,5 +446,19 @@ class TestGithubServiceAmendTeamPermissionsForRepository(unittest.TestCase):
             "test_repository")
 
 
+@patch("gql.transport.aiohttp.AIOHTTPTransport.__new__", new=MagicMock)
+@patch("gql.Client.__new__")
+@patch("github.Github.__new__", new=MagicMock)
+class TestGithubServiceGetTeamIdFromTeamName(unittest.TestCase):
+    def test_calls_downstream_services(self, mock_gql_client):
+        github_service = GithubService("", ORGANISATION_NAME)
+        github_service.get_team_id_from_team_name("test_team_name")
+        github_service.github_client_gql_api.assert_has_calls([
+            call.execute().__getitem__('organization'),
+            call.execute().__getitem__().__getitem__('team'),
+            call.execute().__getitem__().__getitem__().__getitem__('databaseId')
+        ])
+
+
 if __name__ == "__main__":
     unittest.main()
