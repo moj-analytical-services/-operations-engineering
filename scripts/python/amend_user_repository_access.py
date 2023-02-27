@@ -132,32 +132,6 @@ def organisation_teams_name_query(after_cursor=None) -> DocumentNode:
     return gql(query)
 
 
-def organisation_team_id_query(team_name=None) -> DocumentNode:
-    """A GraphQL query to get the id of an organisation team
-
-    Args:
-        team_name (string, optional): Name of the organisation team. Defaults to None.
-
-    Returns:
-        gql: The GraphQL query result
-    """
-    query = """
-    query {
-        organization(login: "moj-analytical-services") {
-            team(slug: TEAM_NAME) {
-                databaseId
-            }
-        }
-    }
-        """.replace(
-        # This is the team name
-        "TEAM_NAME",
-        '"{}"'.format(team_name) if team_name else "null",
-    )
-
-    return gql(query)
-
-
 def team_repos_query(after_cursor=None, team_name=None) -> DocumentNode:
     """A GraphQL query to get the list of repos a team has access to in the organisation
 
@@ -346,30 +320,6 @@ def fetch_team_names(github_service: GithubService) -> list:
     return team_name_list
 
 
-def fetch_team_id(github_service: GithubService, team_name) -> int:
-    """A wrapper function to run a GraphQL query to get the team ID
-
-    Args:
-        team_name (string): The team name
-
-    Returns:
-        int: The team ID of the team
-    """
-    query = organisation_team_id_query(team_name)
-    try:
-        data = github_service.github_client_gql_api.execute(query)
-    except Exception as err:
-        print("Exception in fetch_team_id()")
-        print(err)
-    else:
-        if (
-            data["organization"]["team"]["databaseId"] is not None
-            and data["organization"]["team"]["databaseId"]
-        ):
-            return data["organization"]["team"]["databaseId"]
-    return 0
-
-
 def fetch_team_users(github_service: GithubService, team_name) -> list:
     """A wrapper function to run a GraphQL query to get the list of users within an organisation team
 
@@ -509,7 +459,7 @@ def fetch_team(github_service: GithubService, team_name) -> team:
     """
     team_users_list = fetch_team_users(github_service, team_name)
     team_repos_list = fetch_team_repos(github_service, team_name)
-    team_id = fetch_team_id(github_service, team_name)
+    team_id = github_service.get_team_id_from_team_name(team_name)
     return team(team_name, team_users_list, team_repos_list, team_id)
 
 
@@ -659,19 +609,17 @@ def put_users_into_new_team(github_service: GithubService, repository_name, rema
 
             temp_name = repository_name + "-" + users_permission + "-team"
             team_name = correct_team_name(temp_name)
+            team_id = github_service.get_team_id_from_team_name(team_name)
 
             if not github_service.team_exists(team_name):
                 github_service.create_new_team_with_repository(
                     team_name, repository_name)
-                team_id = fetch_team_id(github_service, team_name)
                 # Depends who adds the oauth_token to repo is added to every team
                 github_service.remove_user_from_team("AntonyBishop", team_id)
                 github_service.remove_user_from_team("nickwalt01", team_id)
                 github_service.remove_user_from_team("ben-al", team_id)
                 github_service.remove_user_from_team(
                     "moj-operations-engineering-bot", team_id)
-
-            team_id = fetch_team_id(github_service, team_name)
 
             github_service.amend_team_permissions_for_repository(
                 team_id, users_permission, repository_name)
