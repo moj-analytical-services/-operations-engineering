@@ -1,5 +1,5 @@
+import logging
 import sys
-import time
 import traceback
 
 from gql import gql
@@ -472,9 +472,10 @@ def fetch_teams(github_service: GithubService) -> list:
     teams_list = []
     teams_names_list = fetch_team_names(github_service)
     for team_name in teams_names_list:
-        teams_list.append(fetch_team(github_service, team_name))
-        # Delay for GH API
-        time.sleep(1)
+        try:
+            teams_list.append(fetch_team(github_service, team_name))
+        except Exception:
+            logging.exception(f"Exception fetching team name {team_name} information. Skipping iteration.")
 
     return teams_list
 
@@ -604,30 +605,32 @@ def put_users_into_new_team(github_service: GithubService, repository_name, rema
         return
     else:
         for username in remaining_users:
-            users_permission = github_service.get_user_permission_for_repository(
-                username, repository_name)
+            try:
+                users_permission = github_service.get_user_permission_for_repository(
+                    username, repository_name)
 
-            temp_name = repository_name + "-" + users_permission + "-team"
-            team_name = correct_team_name(temp_name)
-            team_id = github_service.get_team_id_from_team_name(team_name)
+                temp_name = repository_name + "-" + users_permission + "-team"
+                team_name = correct_team_name(temp_name)
+                team_id = github_service.get_team_id_from_team_name(team_name)
 
-            if not github_service.team_exists(team_name):
-                github_service.create_new_team_with_repository(
-                    team_name, repository_name)
-                # Depends who adds the oauth_token to repo is added to every team
-                github_service.remove_user_from_team("AntonyBishop", team_id)
-                github_service.remove_user_from_team("nickwalt01", team_id)
-                github_service.remove_user_from_team("ben-al", team_id)
-                github_service.remove_user_from_team(
-                    "moj-operations-engineering-bot", team_id)
+                if not github_service.team_exists(team_name):
+                    github_service.create_new_team_with_repository(
+                        team_name, repository_name)
+                    # Depends who adds the oauth_token to repo is added to every team
+                    github_service.remove_user_from_team("AntonyBishop", team_id)
+                    github_service.remove_user_from_team("nickwalt01", team_id)
+                    github_service.remove_user_from_team("ben-al", team_id)
+                    github_service.remove_user_from_team(
+                        "moj-operations-engineering-bot", team_id)
 
-            github_service.amend_team_permissions_for_repository(
-                team_id, users_permission, repository_name)
+                github_service.amend_team_permissions_for_repository(
+                    team_id, users_permission, repository_name)
 
-            github_service.add_user_to_team(username, team_id)
-            github_service.remove_user_from_repository(
-                username, repository_name)
-
+                github_service.add_user_to_team(username, team_id)
+                github_service.remove_user_from_repository(
+                    username, repository_name)
+            except Exception:
+                logging.exception(f"Exception while putting {username} into team. Skipping iteration.")
 
 def run(github_service: GithubService, badly_named_repositories: list[str], repo_issues_enabled):
     """A function for the main functionality of the script"""
