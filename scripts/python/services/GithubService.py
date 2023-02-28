@@ -3,7 +3,7 @@ from calendar import timegm
 from datetime import datetime, timedelta
 from textwrap import dedent
 from time import gmtime, sleep
-from typing import Callable
+from typing import Any, Callable
 
 from github import Github, RateLimitExceededException
 from github.Issue import Issue
@@ -44,6 +44,7 @@ def retries_github_rate_limit_exception_at_next_reset_once(func: Callable) -> Ca
 
 class GithubService:
     USER_ACCESS_REMOVED_ISSUE_TITLE: str = "User access removed, access is now via a team"
+    GITHUB_GQL_MAX_PAGE_SIZE = 100
 
     def __init__(self, org_token: str, organisation_name: str) -> None:
         self.github_client_core_api: Github = Github(org_token)
@@ -174,3 +175,31 @@ class GithubService:
         """), variable_values={"organisation_name": self.organisation_name, "team_name": team_name})
 
         return data["organization"]["team"]["databaseId"]
+
+    def get_paginated_list_of_repositories(self, after_cursor: str | None, page_size: int = 100) -> dict[str, Any]:
+        logging.info(
+            f"Getting paginated list of repositories. Page size {page_size}, after cursor {bool(after_cursor)}")
+        if page_size > self.GITHUB_GQL_MAX_PAGE_SIZE:
+            raise ValueError(f"Page size of {page_size} is too large. Max page size {self.GITHUB_GQL_MAX_PAGE_SIZE}")
+        return self.github_client_gql_api.execute(gql("""
+            query($organisation_name: String!, $page_size: Int!, $after_cursor: String) {
+                organization(login: $organisation_name) {
+                    repositories(first: $page_size, after: $after_cursor) {
+                        pageInfo {
+                            endCursor
+                            hasNextPage
+                        }
+                        edges {
+                            node {
+                                name
+                                isDisabled
+                                isArchived
+                                isLocked
+                                hasIssuesEnabled
+                            }
+                        }
+                    }
+                }
+            }
+        """), variable_values={"organisation_name": self.organisation_name, "page_size": page_size,
+                               "after_cursor": after_cursor})
