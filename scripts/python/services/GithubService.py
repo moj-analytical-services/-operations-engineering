@@ -161,7 +161,7 @@ class GithubService:
         self.github_client_core_api.get_organization(self.organisation_name).get_team(
             team_id).update_team_repository(repo, permission)
 
-    def get_team_id_from_team_name(self, team_name: str) -> int:
+    def get_team_id_from_team_name(self, team_name: str) -> int | TypeError:
         logging.info(f"Getting team ID for team name {team_name}")
         data = self.github_client_gql_api.execute(gql("""
             query($organisation_name: String!, $team_name: String!) {
