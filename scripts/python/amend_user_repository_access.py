@@ -475,7 +475,8 @@ def fetch_teams(github_service: GithubService) -> list:
         try:
             teams_list.append(fetch_team(github_service, team_name))
         except Exception:
-            logging.exception(f"Exception fetching team name {team_name} information. Skipping iteration.")
+            logging.exception(
+                f"Exception fetching team name {team_name} information. Skipping iteration.")
 
     return teams_list
 
@@ -617,7 +618,8 @@ def put_users_into_new_team(github_service: GithubService, repository_name, rema
                     github_service.create_new_team_with_repository(
                         team_name, repository_name)
                     # Depends who adds the oauth_token to repo is added to every team
-                    github_service.remove_user_from_team("AntonyBishop", team_id)
+                    github_service.remove_user_from_team(
+                        "AntonyBishop", team_id)
                     github_service.remove_user_from_team("nickwalt01", team_id)
                     github_service.remove_user_from_team("ben-al", team_id)
                     github_service.remove_user_from_team(
@@ -630,7 +632,9 @@ def put_users_into_new_team(github_service: GithubService, repository_name, rema
                 github_service.remove_user_from_repository(
                     username, repository_name)
             except Exception:
-                logging.exception(f"Exception while putting {username} into team. Skipping iteration.")
+                logging.exception(
+                    f"Exception while putting {username} into team. Skipping iteration.")
+
 
 def run(github_service: GithubService, badly_named_repositories: list[str], repo_issues_enabled):
     """A function for the main functionality of the script"""
