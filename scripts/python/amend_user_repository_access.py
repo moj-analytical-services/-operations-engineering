@@ -60,44 +60,6 @@ def repository_user_names_query(after_cursor=None, repository_name=None) -> Docu
     return gql(query)
 
 
-def organisation_repo_name_query(after_cursor=None) -> DocumentNode:
-    """A GraphQL query to get the list of organisation repo names
-
-    Args:
-        after_cursor (string, optional): Is the pagination offset value gathered from the previous API request. Defaults to None.
-
-    Returns:
-        gql: The GraphQL query result
-    """
-    query = """
-    query {
-        organization(login: "moj-analytical-services") {
-            repositories(first: 100, after:AFTER) {
-                pageInfo {
-                    endCursor
-                    hasNextPage
-                }
-                edges {
-                    node {
-                        name
-                        isDisabled
-                        isArchived
-                        isLocked
-                        hasIssuesEnabled
-                    }
-                }
-            }
-        }
-    }
-        """.replace(
-        # This is the next page ID to start the fetch from
-        "AFTER",
-        '"{}"'.format(after_cursor) if after_cursor else "null",
-    )
-
-    return gql(query)
-
-
 def organisation_teams_name_query(after_cursor=None) -> DocumentNode:
     """A GraphQL query to get the list of organisation team names
 
@@ -223,31 +185,25 @@ def fetch_repo_names(github_service: GithubService, repo_issues_enabled) -> list
     repo_name_list = []
 
     while has_next_page:
-        query = organisation_repo_name_query(after_cursor)
+        data = github_service.get_paginated_list_of_repositories(after_cursor)
 
-        try:
-            data = github_service.github_client_gql_api.execute(query)
-        except Exception as err:
-            print("Exception in fetch_repo_names()")
-            print(err)
-        else:
-            # Retrieve the name of the repos
-            if data["organization"]["repositories"]["edges"] is not None:
-                for repo in data["organization"]["repositories"]["edges"]:
-                    # Skip locked repositories
-                    if not (
-                        repo["node"]["isDisabled"]
-                        or repo["node"]["isArchived"]
-                        or repo["node"]["isLocked"]
-                    ):
-                        repo_name_list.append(repo["node"]["name"])
-                        repo_issues_enabled[repo["node"]["name"]] = repo["node"][
-                            "hasIssuesEnabled"
-                        ]
+        # Retrieve the name of the repos
+        if data["organization"]["repositories"]["edges"] is not None:
+            for repo in data["organization"]["repositories"]["edges"]:
+                # Skip locked repositories
+                if not (
+                    repo["node"]["isDisabled"]
+                    or repo["node"]["isArchived"]
+                    or repo["node"]["isLocked"]
+                ):
+                    repo_name_list.append(repo["node"]["name"])
+                    repo_issues_enabled[repo["node"]["name"]] = repo["node"][
+                        "hasIssuesEnabled"
+                    ]
 
-            # Read the GH API page info section to see if there is more data to read
-            has_next_page = data["organization"]["repositories"]["pageInfo"]["hasNextPage"]
-            after_cursor = data["organization"]["repositories"]["pageInfo"]["endCursor"]
+        # Read the GH API page info section to see if there is more data to read
+        has_next_page = data["organization"]["repositories"]["pageInfo"]["hasNextPage"]
+        after_cursor = data["organization"]["repositories"]["pageInfo"]["endCursor"]
 
     return repo_name_list
 
