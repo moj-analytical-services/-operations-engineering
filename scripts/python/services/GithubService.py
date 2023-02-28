@@ -180,7 +180,8 @@ class GithubService:
         logging.info(
             f"Getting paginated list of repositories. Page size {page_size}, after cursor {bool(after_cursor)}")
         if page_size > self.GITHUB_GQL_MAX_PAGE_SIZE:
-            raise ValueError(f"Page size of {page_size} is too large. Max page size {self.GITHUB_GQL_MAX_PAGE_SIZE}")
+            raise ValueError(
+                f"Page size of {page_size} is too large. Max page size {self.GITHUB_GQL_MAX_PAGE_SIZE}")
         return self.github_client_gql_api.execute(gql("""
             query($organisation_name: String!, $page_size: Int!, $after_cursor: String) {
                 organization(login: $organisation_name) {

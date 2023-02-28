@@ -59,6 +59,7 @@ def repository_user_names_query(after_cursor=None, repository_name=None) -> Docu
 
     return gql(query)
 
+
 def organisation_teams_name_query(after_cursor=None) -> DocumentNode:
     """A GraphQL query to get the list of organisation team names
 
