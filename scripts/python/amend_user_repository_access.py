@@ -1,5 +1,5 @@
+import logging
 import sys
-import time
 import traceback
 
 from gql import gql
@@ -60,44 +60,6 @@ def repository_user_names_query(after_cursor=None, repository_name=None) -> Docu
     return gql(query)
 
 
-def organisation_repo_name_query(after_cursor=None) -> DocumentNode:
-    """A GraphQL query to get the list of organisation repo names
-
-    Args:
-        after_cursor (string, optional): Is the pagination offset value gathered from the previous API request. Defaults to None.
-
-    Returns:
-        gql: The GraphQL query result
-    """
-    query = """
-    query {
-        organization(login: "moj-analytical-services") {
-            repositories(first: 100, after:AFTER) {
-                pageInfo {
-                    endCursor
-                    hasNextPage
-                }
-                edges {
-                    node {
-                        name
-                        isDisabled
-                        isArchived
-                        isLocked
-                        hasIssuesEnabled
-                    }
-                }
-            }
-        }
-    }
-        """.replace(
-        # This is the next page ID to start the fetch from
-        "AFTER",
-        '"{}"'.format(after_cursor) if after_cursor else "null",
-    )
-
-    return gql(query)
-
-
 def organisation_teams_name_query(after_cursor=None) -> DocumentNode:
     """A GraphQL query to get the list of organisation team names
 
@@ -127,32 +89,6 @@ def organisation_teams_name_query(after_cursor=None) -> DocumentNode:
         # This is the next page ID to start the fetch from
         "AFTER",
         '"{}"'.format(after_cursor) if after_cursor else "null",
-    )
-
-    return gql(query)
-
-
-def organisation_team_id_query(team_name=None) -> DocumentNode:
-    """A GraphQL query to get the id of an organisation team
-
-    Args:
-        team_name (string, optional): Name of the organisation team. Defaults to None.
-
-    Returns:
-        gql: The GraphQL query result
-    """
-    query = """
-    query {
-        organization(login: "moj-analytical-services") {
-            team(slug: TEAM_NAME) {
-                databaseId
-            }
-        }
-    }
-        """.replace(
-        # This is the team name
-        "TEAM_NAME",
-        '"{}"'.format(team_name) if team_name else "null",
     )
 
     return gql(query)
@@ -249,31 +185,25 @@ def fetch_repo_names(github_service: GithubService, repo_issues_enabled) -> list
     repo_name_list = []
 
     while has_next_page:
-        query = organisation_repo_name_query(after_cursor)
+        data = github_service.get_paginated_list_of_repositories(after_cursor)
 
-        try:
-            data = github_service.github_client_gql_api.execute(query)
-        except Exception as err:
-            print("Exception in fetch_repo_names()")
-            print(err)
-        else:
-            # Retrieve the name of the repos
-            if data["organization"]["repositories"]["edges"] is not None:
-                for repo in data["organization"]["repositories"]["edges"]:
-                    # Skip locked repositories
-                    if not (
-                        repo["node"]["isDisabled"]
-                        or repo["node"]["isArchived"]
-                        or repo["node"]["isLocked"]
-                    ):
-                        repo_name_list.append(repo["node"]["name"])
-                        repo_issues_enabled[repo["node"]["name"]] = repo["node"][
-                            "hasIssuesEnabled"
-                        ]
+        # Retrieve the name of the repos
+        if data["organization"]["repositories"]["edges"] is not None:
+            for repo in data["organization"]["repositories"]["edges"]:
+                # Skip locked repositories
+                if not (
+                    repo["node"]["isDisabled"]
+                    or repo["node"]["isArchived"]
+                    or repo["node"]["isLocked"]
+                ):
+                    repo_name_list.append(repo["node"]["name"])
+                    repo_issues_enabled[repo["node"]["name"]] = repo["node"][
+                        "hasIssuesEnabled"
+                    ]
 
-            # Read the GH API page info section to see if there is more data to read
-            has_next_page = data["organization"]["repositories"]["pageInfo"]["hasNextPage"]
-            after_cursor = data["organization"]["repositories"]["pageInfo"]["endCursor"]
+        # Read the GH API page info section to see if there is more data to read
+        has_next_page = data["organization"]["repositories"]["pageInfo"]["hasNextPage"]
+        after_cursor = data["organization"]["repositories"]["pageInfo"]["endCursor"]
 
     return repo_name_list
 
@@ -344,30 +274,6 @@ def fetch_team_names(github_service: GithubService) -> list:
             after_cursor = data["organization"]["teams"]["pageInfo"]["endCursor"]
 
     return team_name_list
-
-
-def fetch_team_id(github_service: GithubService, team_name) -> int:
-    """A wrapper function to run a GraphQL query to get the team ID
-
-    Args:
-        team_name (string): The team name
-
-    Returns:
-        int: The team ID of the team
-    """
-    query = organisation_team_id_query(team_name)
-    try:
-        data = github_service.github_client_gql_api.execute(query)
-    except Exception as err:
-        print("Exception in fetch_team_id()")
-        print(err)
-    else:
-        if (
-            data["organization"]["team"]["databaseId"] is not None
-            and data["organization"]["team"]["databaseId"]
-        ):
-            return data["organization"]["team"]["databaseId"]
-    return 0
 
 
 def fetch_team_users(github_service: GithubService, team_name) -> list:
@@ -509,7 +415,7 @@ def fetch_team(github_service: GithubService, team_name) -> team:
     """
     team_users_list = fetch_team_users(github_service, team_name)
     team_repos_list = fetch_team_repos(github_service, team_name)
-    team_id = fetch_team_id(github_service, team_name)
+    team_id = github_service.get_team_id_from_team_name(team_name)
     return team(team_name, team_users_list, team_repos_list, team_id)
 
 
@@ -522,9 +428,11 @@ def fetch_teams(github_service: GithubService) -> list:
     teams_list = []
     teams_names_list = fetch_team_names(github_service)
     for team_name in teams_names_list:
-        teams_list.append(fetch_team(github_service, team_name))
-        # Delay for GH API
-        time.sleep(1)
+        try:
+            teams_list.append(fetch_team(github_service, team_name))
+        except Exception:
+            logging.exception(
+                f"Exception fetching team name {team_name} information. Skipping iteration.")
 
     return teams_list
 
@@ -571,120 +479,6 @@ def remove_users_with_duplicate_access(github_service: GithubService, repo_issue
 
                     # The user is in a team
                     users_not_in_a_team.remove(username)
-
-
-def add_user_to_team(github_service: GithubService, team_id, username):
-    """add a user to a team
-
-    Args:
-        team_id (int): the GH ID of the team
-        username (string): the name of the user
-    """
-    try:
-        gh = github_service.github_client_core_api
-        org = gh.get_organization("moj-analytical-services")
-        gh_team = org.get_team(team_id)
-        user = gh.get_user(username)
-        gh_team.add_membership(user)
-        # Delay for GH API
-        time.sleep(5)
-        print("Add user " + username + " to team " + team_id.__str__())
-    except Exception:
-        message = (
-            "Warning: Exception in adding user "
-            + username
-            + " to team "
-            + team_id.__str__()
-        )
-        print_stack_trace(message)
-
-
-def create_new_team_with_repository(github_service: GithubService, repository_name, team_name):
-    """create a new team and attach to a repository
-
-    Args:
-        repository_name (string): the name of the repository to attach to
-        team_name (string): the name of the team
-    """
-    try:
-        gh = github_service.github_client_core_api
-        repo = gh.get_repo(
-            f"{github_service.organisation_name}/{repository_name}")
-        org = gh.get_organization("moj-analytical-services")
-        org.create_team(
-            team_name,
-            [repo],
-            "",
-            "closed",
-            "Automated generated team to grant users access to this repository",
-        )
-        # Delay for GH API
-        time.sleep(5)
-        print("Creating new team " + team_name)
-    except Exception:
-        message = "Warning: Exception in creating a team " + team_name
-        print_stack_trace(message)
-
-
-def does_team_exist(github_service: GithubService, team_name):
-    """Check if a team exists in the organization
-
-    Args:
-        team_name (string): the name of the team
-
-    Returns:
-        bool: if the team was found in the organization
-    """
-
-    team_found = False
-
-    try:
-        gh = github_service.github_client_core_api
-        org = gh.get_organization("moj-analytical-services")
-        gh_teams = org.get_teams()
-        for gh_team in gh_teams:
-            if gh_team.name == team_name:
-                team_found = True
-                break
-    except Exception:
-        message = "Warning: Exception in check to see if a team exists " + team_name
-        print_stack_trace(message)
-
-    return team_found
-
-
-def change_team_repository_permission(github_service: GithubService, repository_name, team_name, team_id, permission):
-    """changes the team permissions on a repository
-
-    Args:
-        repository_name (string): the name of the repository
-        team_name (string): the name of the team
-        team_id (int): the GH id of the team
-        permission (string): the permission of the team
-    """
-    if permission == "read":
-        permission = "pull"
-    elif permission == "write":
-        permission = "push"
-
-    try:
-        gh = github_service.github_client_core_api
-        repo = gh.get_repo(
-            f"{github_service.organisation_name}/{repository_name}")
-        org = gh.get_organization("moj-analytical-services")
-        gh_team = org.get_team(team_id)
-        gh_team.update_team_repository(repo, permission)
-        # Delay for GH API
-        time.sleep(5)
-        print("Change team " + team_name + " repo permission to " + permission)
-    except Exception:
-        message = (
-            "Warning: Exception in changing team "
-            + team_name
-            + " permission on repository "
-            + repository_name
-        )
-        print_stack_trace(message)
 
 
 def correct_team_name(team_name):
@@ -749,7 +543,7 @@ def put_user_into_existing_team(
             if (expected_team_name == team.name) and (
                 repository_name in team.team_repositories
             ):
-                add_user_to_team(github_service, team.team_id, username)
+                github_service.add_user_to_team(username, team.team_id)
                 github_service.remove_user_from_repository(
                     username, repository_name)
                 users_not_in_a_team.remove(username)
@@ -768,32 +562,34 @@ def put_users_into_new_team(github_service: GithubService, repository_name, rema
         return
     else:
         for username in remaining_users:
-            users_permission = github_service.get_user_permission_for_repository(
-                username, repository_name)
+            try:
+                users_permission = github_service.get_user_permission_for_repository(
+                    username, repository_name)
 
-            temp_name = repository_name + "-" + users_permission + "-team"
-            team_name = correct_team_name(temp_name)
+                temp_name = repository_name + "-" + users_permission + "-team"
+                team_name = correct_team_name(temp_name)
+                team_id = github_service.get_team_id_from_team_name(team_name)
 
-            if not does_team_exist(github_service, team_name):
-                create_new_team_with_repository(
-                    github_service, repository_name, team_name)
-                team_id = fetch_team_id(github_service, team_name)
-                # Depends who adds the oauth_token to repo is added to every team
-                github_service.remove_user_from_team("AntonyBishop", team_id)
-                github_service.remove_user_from_team("nickwalt01", team_id)
-                github_service.remove_user_from_team("ben-al", team_id)
-                github_service.remove_user_from_team(
-                    "moj-operations-engineering-bot", team_id)
+                if not github_service.team_exists(team_name):
+                    github_service.create_new_team_with_repository(
+                        team_name, repository_name)
+                    # Depends who adds the oauth_token to repo is added to every team
+                    github_service.remove_user_from_team(
+                        "AntonyBishop", team_id)
+                    github_service.remove_user_from_team("nickwalt01", team_id)
+                    github_service.remove_user_from_team("ben-al", team_id)
+                    github_service.remove_user_from_team(
+                        "moj-operations-engineering-bot", team_id)
 
-            team_id = fetch_team_id(github_service, team_name)
+                github_service.amend_team_permissions_for_repository(
+                    team_id, users_permission, repository_name)
 
-            change_team_repository_permission(github_service,
-                                              repository_name, team_name, team_id, users_permission
-                                              )
-
-            add_user_to_team(github_service, team_id, username)
-            github_service.remove_user_from_repository(
-                username, repository_name)
+                github_service.add_user_to_team(username, team_id)
+                github_service.remove_user_from_repository(
+                    username, repository_name)
+            except Exception:
+                logging.exception(
+                    f"Exception while putting {username} into team. Skipping iteration.")
 
 
 def run(github_service: GithubService, badly_named_repositories: list[str], repo_issues_enabled):

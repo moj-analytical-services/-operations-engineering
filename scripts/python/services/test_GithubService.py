@@ -2,12 +2,56 @@ import unittest
 from datetime import datetime, timedelta
 from unittest.mock import call, MagicMock, Mock, patch
 
+from freezegun import freeze_time
+from github import Github, RateLimitExceededException
 from github.NamedUser import NamedUser
+from github.Team import Team
 
-from .GithubService import GithubService
+from .GithubService import GithubService, retries_github_rate_limit_exception_at_next_reset_once
 
 ORGANISATION_NAME = "moj-analytical-services"
 USER_ACCESS_REMOVED_ISSUE_TITLE = "User access removed, access is now via a team"
+
+
+class TestRetriesGithubRateLimitExceptionAtNextResetOnce(unittest.TestCase):
+
+    def test_function_is_only_called_once_with_arguments(self):
+        mock_function = Mock()
+        mock_github_client = Mock(Github)
+        mock_github_service = Mock(
+            GithubService, github_client_core_api=mock_github_client)
+        retries_github_rate_limit_exception_at_next_reset_once(
+            mock_function)(mock_github_service, "test_arg")
+        mock_function.assert_has_calls(
+            [call(mock_github_service, "test_arg")])
+
+    @freeze_time("2023-02-01")
+    def test_function_is_called_twice_when_rate_limit_exception_raised_once(self):
+        mock_function = Mock(
+            side_effect=[RateLimitExceededException(Mock(), Mock(), Mock()), Mock()])
+        mock_github_client = Mock(Github)
+        mock_github_client.get_rate_limit().core.reset = datetime.now()
+        mock_github_service = Mock(
+            GithubService, github_client_core_api=mock_github_client)
+        retries_github_rate_limit_exception_at_next_reset_once(
+            mock_function)(mock_github_service, "test_arg")
+        mock_function.assert_has_calls([call(mock_github_service, 'test_arg')], [
+                                       call(mock_github_service, 'test_arg')])
+
+    @freeze_time("2023-02-01")
+    def test_rate_limit_exception_raised_when_rate_limit_exception_raised_twice(self):
+        mock_function = Mock(side_effect=[
+            RateLimitExceededException(Mock(), Mock(), Mock()),
+            RateLimitExceededException(Mock(), Mock(), Mock())]
+        )
+        mock_github_client = Mock(Github)
+        mock_github_client.get_rate_limit().core.reset = datetime.now()
+        mock_github_service = Mock(
+            GithubService, github_client_core_api=mock_github_client)
+        self.assertRaises(RateLimitExceededException,
+                          retries_github_rate_limit_exception_at_next_reset_once(
+                              mock_function), mock_github_service,
+                          "test_arg")
 
 
 @patch("gql.transport.aiohttp.AIOHTTPTransport.__new__", new=MagicMock)
@@ -250,6 +294,185 @@ class TestGithubServiceRemoveUserFromTeam(unittest.TestCase):
         github_service = GithubService("", ORGANISATION_NAME)
         self.assertRaises(
             ConnectionError, github_service.remove_user_from_team, "test_user", "test_repository")
+
+
+@patch("gql.transport.aiohttp.AIOHTTPTransport.__new__", new=MagicMock)
+@patch("gql.Client.__new__", new=MagicMock)
+@patch("github.Github.__new__")
+class TestGithubServiceAddUserToTeam(unittest.TestCase):
+    def test_calls_downstream_services(self, mock_github_client_core_api):
+        mock_github_client_core_api.return_value.get_user.return_value = "mock_user"
+        github_service = GithubService("", ORGANISATION_NAME)
+        github_service.add_user_to_team("test_user", 1)
+        github_service.github_client_core_api.get_user.assert_has_calls([
+            call('test_user')])
+        github_service.github_client_core_api.get_organization.assert_has_calls([
+            call('moj-analytical-services'),
+            call().get_team(1),
+            call().get_team().add_membership('mock_user')
+        ])
+
+    def test_throws_exception_when_client_throws_exception(self, mock_github_client_core_api):
+        mock_github_client_core_api.return_value.get_organization = MagicMock(
+            side_effect=ConnectionError)
+        github_service = GithubService("", ORGANISATION_NAME)
+        self.assertRaises(
+            ConnectionError, github_service.add_user_to_team, "test_user", 1)
+
+
+@patch("gql.transport.aiohttp.AIOHTTPTransport.__new__", new=MagicMock)
+@patch("gql.Client.__new__", new=MagicMock)
+@patch("github.Github.__new__")
+class TestGithubServiceCreateNewTeamWithRepository(unittest.TestCase):
+    def test_calls_downstream_services(self, mock_github_client_core_api):
+        mock_github_client_core_api.return_value.get_repo.return_value = "mock_repo"
+        github_service = GithubService("", ORGANISATION_NAME)
+        github_service.create_new_team_with_repository(
+            "test_team", "test_repository")
+        github_service.github_client_core_api.get_repo.assert_has_calls([
+            call('moj-analytical-services/test_repository')
+        ])
+        github_service.github_client_core_api.get_organization.assert_has_calls([
+            call('moj-analytical-services'),
+            call().create_team('test_team', ['mock_repo'], '', 'closed',
+                               'Automated generated team to grant users access to this repository')
+        ])
+
+    def test_throws_exception_when_client_throws_exception(self, mock_github_client_core_api):
+        mock_github_client_core_api.return_value.get_organization = MagicMock(
+            side_effect=ConnectionError)
+        github_service = GithubService("", ORGANISATION_NAME)
+        self.assertRaises(
+            ConnectionError, github_service.create_new_team_with_repository, "test_team", "test_repository")
+
+
+@patch("gql.transport.aiohttp.AIOHTTPTransport.__new__", new=MagicMock)
+@patch("gql.Client.__new__", new=MagicMock)
+@patch("github.Github.__new__")
+class TestGithubServiceTeamExists(unittest.TestCase):
+    mock_unicorn_team = None
+    mock_super_team = None
+
+    def setUp(self):
+        self.mock_unicorn_team, self.mock_super_team = Mock(Team), Mock(Team)
+        # `name` is a reserved value in `Mock()` constructors. So need to mock the values manually.
+        self.mock_unicorn_team.name = "unicorn,team"
+        self.mock_super_team.name = "super/team"
+
+    def test_calls_downstream_services(self, mock_github_client_core_api):
+        mock_github_client_core_api.return_value.get_organization().get_teams.return_value = []
+        github_service = GithubService("", ORGANISATION_NAME)
+        github_service.team_exists("test_team")
+        github_service.github_client_core_api.get_organization.assert_has_calls([
+            call(), call('moj-analytical-services'), call().get_teams()
+        ])
+
+    def test_returns_true_when_team_name_exists(self, mock_github_client_core_api):
+        mock_github_client_core_api.return_value.get_organization().get_teams.return_value = [
+            self.mock_unicorn_team,
+            self.mock_super_team,
+        ]
+        self.assertTrue(GithubService(
+            "", ORGANISATION_NAME).team_exists("unicorn,team"))
+
+    def test_returns_false_when_team_does_not_exist(self, mock_github_client_core_api):
+        mock_github_client_core_api.return_value.get_organization().get_teams.return_value = [
+            self.mock_unicorn_team,
+            self.mock_super_team,
+        ]
+        self.assertFalse(GithubService("", ORGANISATION_NAME).team_exists(
+            "THIS_TEAM_DOES_NOT_EXIST!"))
+
+    def test_returns_false_when_teams_return_none(self, mock_github_client_core_api):
+        mock_github_client_core_api.return_value.get_organization().get_teams.return_value = None
+        self.assertFalse(GithubService(
+            "", ORGANISATION_NAME).team_exists("test"))
+
+    def test_throws_exception_when_client_throws_exception(self, mock_github_client_core_api):
+        mock_github_client_core_api.return_value.get_organization = MagicMock(
+            side_effect=ConnectionError)
+        github_service = GithubService("", ORGANISATION_NAME)
+        self.assertRaises(
+            ConnectionError, github_service.team_exists, "test_team")
+
+
+@patch("gql.transport.aiohttp.AIOHTTPTransport.__new__", new=MagicMock)
+@patch("gql.Client.__new__", new=MagicMock)
+@patch("github.Github.__new__")
+class TestGithubServiceAmendTeamPermissionsForRepository(unittest.TestCase):
+    def test_calls_downstream_services(self, mock_github_client_core_api):
+        mock_github_client_core_api.return_value.get_repo.return_value = "mock_test_repository"
+        github_service = GithubService("", ORGANISATION_NAME)
+        github_service.amend_team_permissions_for_repository(
+            1, "test_permission", "test_repository")
+        github_service.github_client_core_api.get_repo.assert_has_calls([
+            call('moj-analytical-services/test_repository')
+        ])
+        github_service.github_client_core_api.get_organization.assert_has_calls([
+            call('moj-analytical-services'),
+            call().get_team(1),
+            call().get_team().update_team_repository(
+                'mock_test_repository', 'test_permission')
+        ])
+
+    def test_updates_permission_to_pull_when_permission_read(self, mock_github_client_core_api):
+        mock_github_client_core_api.return_value.get_repo.return_value = "mock_test_repository"
+        github_service = GithubService("", ORGANISATION_NAME)
+        github_service.amend_team_permissions_for_repository(
+            1, "read", "test_repository")
+        github_service.github_client_core_api.get_organization.assert_has_calls([
+            call('moj-analytical-services'),
+            call().get_team(1),
+            call().get_team().update_team_repository('mock_test_repository', 'pull')
+        ])
+
+    def test_updates_permission_to_push_when_permission_write(self, mock_github_client_core_api):
+        mock_github_client_core_api.return_value.get_repo.return_value = "mock_test_repository"
+        github_service = GithubService("", ORGANISATION_NAME)
+        github_service.amend_team_permissions_for_repository(
+            1, "write", "test_repository")
+        github_service.github_client_core_api.get_organization.assert_has_calls([
+            call('moj-analytical-services'),
+            call().get_team(1),
+            call().get_team().update_team_repository('mock_test_repository', 'push')
+        ])
+
+    def test_throws_exception_when_client_throws_exception(self, mock_github_client_core_api):
+        mock_github_client_core_api.return_value.get_organization = MagicMock(
+            side_effect=ConnectionError)
+        github_service = GithubService("", ORGANISATION_NAME)
+        self.assertRaises(
+            ConnectionError, github_service.amend_team_permissions_for_repository, 1, "test_permission",
+            "test_repository")
+
+
+@patch("gql.transport.aiohttp.AIOHTTPTransport.__new__", new=MagicMock)
+@patch("gql.Client.__new__")
+@patch("github.Github.__new__", new=MagicMock)
+class TestGithubServiceGetTeamIdFromTeamName(unittest.TestCase):
+    def test_calls_downstream_services(self, mock_gql_client):
+        github_service = GithubService("", ORGANISATION_NAME)
+        github_service.get_team_id_from_team_name("test_team_name")
+        github_service.github_client_gql_api.assert_has_calls([
+            call.execute().__getitem__('organization'),
+            call.execute().__getitem__().__getitem__('team'),
+            call.execute().__getitem__().__getitem__().__getitem__('databaseId')
+        ])
+
+
+@patch("gql.transport.aiohttp.AIOHTTPTransport.__new__", new=MagicMock)
+@patch("gql.Client.__new__", new=MagicMock)
+@patch("github.Github.__new__", new=MagicMock)
+class TestGithubServiceGetPaginatedListOfRepositories(unittest.TestCase):
+    def test_calls_downstream_services(self):
+        github_service = GithubService("", ORGANISATION_NAME)
+        github_service.get_paginated_list_of_repositories("test_after_cursor")
+        github_service.github_client_gql_api.execute.assert_called_once()
+
+    def test_throws_value_error_when_page_size_greater_than_limit(self):
+        github_service = GithubService("", ORGANISATION_NAME)
+        self.assertRaises(
+            ValueError, github_service.get_paginated_list_of_repositories, "test_after_cursor", 101)
 
 
 if __name__ == "__main__":

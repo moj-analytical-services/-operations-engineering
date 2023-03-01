@@ -1,6 +1,7 @@
 boto3
-PyGithub == 1.57
+PyGithub == 1.58.0
 python-dateutil == 2.8.2
 gql
 aiohttp
-slack_sdk == 3.19.5
+slack_sdk == 3.20.0
+freezegun==1.2.2
