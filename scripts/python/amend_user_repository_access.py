@@ -22,42 +22,7 @@ def print_stack_trace(message):
         del exc_info
 
 
-def repository_user_names_query(after_cursor=None, repository_name=None) -> DocumentNode:
-    """A GraphQL query to get the list of user names within a repository that have direct access.
 
-    Args:
-        after_cursor (string, optional): Is the pagination offset value gathered from the previous API request. Defaults to None.
-        repository_name (string, optional): Is the name of the repository that has the associated user/s. Defaults to None.
-
-    Returns:
-        gql: The GraphQL query result
-    """
-    query = """
-    query {
-        repository(name: REPOSITORY_NAME, owner: "moj-analytical-services") {
-            collaborators(first: 100, after:AFTER, affiliation: DIRECT) {
-                edges {
-                    node {
-                        login
-                    }
-                }
-                pageInfo {
-                    hasNextPage
-                    endCursor
-                }
-            }
-        }
-    }
-    """.replace(
-        # This is the next page ID to start the fetch from
-        "AFTER",
-        '"{}"'.format(after_cursor) if after_cursor else "null",
-    ).replace(
-        "REPOSITORY_NAME",
-        '"{}"'.format(repository_name) if repository_name else "null",
-    )
-
-    return gql(query)
 
 
 def organisation_teams_name_query(after_cursor=None) -> DocumentNode:
@@ -223,25 +188,20 @@ def fetch_repository_users(github_service: GithubService, repository_name: str,
     repository_user_name_list = []
 
     while has_next_page:
-        query = repository_user_names_query(after_cursor, repository_name)
+        data = github_service.get_paginated_list_of_user_names_with_direct_access_to_repository(repository_name,
+                                                                                                after_cursor)
 
-        try:
-            data = github_service.github_client_gql_api.execute(query)
-        except Exception as err:
-            print("Exception in fetch_repository_users()")
-            print(err)
-        else:
-            # Retrieve the usernames of the repository members
-            if data["repository"]["collaborators"]["edges"] is not None:
-                for repository in data["repository"]["collaborators"]["edges"]:
-                    # Ignore users that are outside collaborators
-                    if repository["node"]["login"] not in outside_collaborators:
-                        repository_user_name_list.append(
-                            repository["node"]["login"])
+        # Retrieve the usernames of the repository members
+        if data["repository"]["collaborators"]["edges"] is not None:
+            for repository in data["repository"]["collaborators"]["edges"]:
+                # Ignore users that are outside collaborators
+                if repository["node"]["login"] not in outside_collaborators:
+                    repository_user_name_list.append(
+                        repository["node"]["login"])
 
-            # Read the GH API page info section to see if there is more data to read
-            has_next_page = data["repository"]["collaborators"]["pageInfo"]["hasNextPage"]
-            after_cursor = data["repository"]["collaborators"]["pageInfo"]["endCursor"]
+        # Read the GH API page info section to see if there is more data to read
+        has_next_page = data["repository"]["collaborators"]["pageInfo"]["hasNextPage"]
+        after_cursor = data["repository"]["collaborators"]["pageInfo"]["endCursor"]
 
     return repository_user_name_list
 

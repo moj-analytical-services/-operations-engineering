@@ -475,5 +475,22 @@ class TestGithubServiceGetPaginatedListOfRepositories(unittest.TestCase):
             ValueError, github_service.get_paginated_list_of_repositories, "test_after_cursor", 101)
 
 
+@patch("gql.transport.aiohttp.AIOHTTPTransport.__new__", new=MagicMock)
+@patch("gql.Client.__new__", new=MagicMock)
+@patch("github.Github.__new__", new=MagicMock)
+class TestGithubServiceGetPaginatedListOfUserNamesWithDirectAccessToRepository(unittest.TestCase):
+    def test_calls_downstream_services(self):
+        github_service = GithubService("", ORGANISATION_NAME)
+        github_service.get_paginated_list_of_user_names_with_direct_access_to_repository("test_repository_name",
+                                                                                         "test_after_cursor")
+        github_service.github_client_gql_api.execute.assert_called_once()
+
+    def test_throws_value_error_when_page_size_greater_than_limit(self):
+        github_service = GithubService("", ORGANISATION_NAME)
+        self.assertRaises(
+            ValueError, github_service.get_paginated_list_of_user_names_with_direct_access_to_repository,
+            "test_repository_name", "test_after_cursor", 101)
+
+
 if __name__ == "__main__":
     unittest.main()
