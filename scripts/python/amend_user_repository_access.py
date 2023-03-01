@@ -22,40 +22,6 @@ def print_stack_trace(message):
         del exc_info
 
 
-def organisation_teams_name_query(after_cursor=None) -> DocumentNode:
-    """A GraphQL query to get the list of organisation team names
-
-    Args:
-        after_cursor (string, optional): Is the pagination offset value gathered from the previous API request. Defaults to None.
-
-    Returns:
-        gql: The GraphQL query result
-    """
-    query = """
-    query {
-        organization(login: "moj-analytical-services") {
-            teams(first: 100, after:AFTER) {
-                pageInfo {
-                    endCursor
-                    hasNextPage
-                }
-                edges {
-                    node {
-                        slug
-                    }
-                }
-            }
-        }
-    }
-        """.replace(
-        # This is the next page ID to start the fetch from
-        "AFTER",
-        '"{}"'.format(after_cursor) if after_cursor else "null",
-    )
-
-    return gql(query)
-
-
 def team_repos_query(after_cursor=None, team_name=None) -> DocumentNode:
     """A GraphQL query to get the list of repos a team has access to in the organisation
 
@@ -214,21 +180,16 @@ def fetch_team_names(github_service: GithubService) -> list:
     team_name_list = []
 
     while has_next_page:
-        query = organisation_teams_name_query(after_cursor)
-        try:
-            data = github_service.github_client_gql_api.execute(query)
-        except Exception as err:
-            print("Exception in fetch_team_names()")
-            print(err)
-        else:
-            # Retrieve the name of the teams
-            if data["organization"]["teams"]["edges"] is not None:
-                for team in data["organization"]["teams"]["edges"]:
-                    team_name_list.append(team["node"]["slug"])
+        data = github_service.get_paginated_list_of_team_names(after_cursor)
 
-            # Read the GH API page info section to see if there is more data to read
-            has_next_page = data["organization"]["teams"]["pageInfo"]["hasNextPage"]
-            after_cursor = data["organization"]["teams"]["pageInfo"]["endCursor"]
+        # Retrieve the name of the teams
+        if data["organization"]["teams"]["edges"] is not None:
+            for team in data["organization"]["teams"]["edges"]:
+                team_name_list.append(team["node"]["slug"])
+
+        # Read the GH API page info section to see if there is more data to read
+        has_next_page = data["organization"]["teams"]["pageInfo"]["hasNextPage"]
+        after_cursor = data["organization"]["teams"]["pageInfo"]["endCursor"]
 
     return team_name_list
 
