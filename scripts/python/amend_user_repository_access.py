@@ -22,9 +22,6 @@ def print_stack_trace(message):
         del exc_info
 
 
-
-
-
 def organisation_teams_name_query(after_cursor=None) -> DocumentNode:
     """A GraphQL query to get the list of organisation team names
 
