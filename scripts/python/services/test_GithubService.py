@@ -78,7 +78,8 @@ class TestRetriesGithubRateLimitExceptionAtNextResetOnce(unittest.TestCase):
         mock_github_service = Mock(
             GithubService, github_client_core_api=mock_github_client)
         self.assertRaises(TransportQueryError,
-                          retries_github_rate_limit_exception_at_next_reset_once(mock_function), mock_github_service,
+                          retries_github_rate_limit_exception_at_next_reset_once(
+                              mock_function), mock_github_service,
                           "test_arg")
 
 

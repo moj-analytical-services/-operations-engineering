@@ -29,7 +29,8 @@ def retries_github_rate_limit_exception_at_next_reset_once(func: Callable) -> Ca
         try:
             return func(*args, **kwargs)
         except (RateLimitExceededException, TransportQueryError) as exception:
-            logging.warning(f"Caught {type(exception).__name__}, retrying calls when rate limit resets.")
+            logging.warning(
+                f"Caught {type(exception).__name__}, retrying calls when rate limit resets.")
             rate_limits = args[0].github_client_core_api.get_rate_limit()
             rate_limit_to_use = rate_limits.core if type(
                 exception) is RateLimitExceededException else rate_limits.graphql
