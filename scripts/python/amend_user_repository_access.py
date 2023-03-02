@@ -19,7 +19,6 @@ def print_stack_trace(message):
         del exc_info
 
 
-
 def fetch_repo_names(github_service: GithubService, repo_issues_enabled) -> list:
     """A wrapper function to run a GraphQL query to get the list of repo names in the organisation
 
@@ -126,8 +125,9 @@ def fetch_team_users(github_service: GithubService, team_name) -> list:
     team_user_name_list = []
 
     while has_next_page:
-        data = github_service.get_paginated_list_of_team_user_names(team_name, after_cursor)
- 
+        data = github_service.get_paginated_list_of_team_user_names(
+            team_name, after_cursor)
+
         # Retrieve the usernames of the team members
         if data["organization"]["team"]["members"]["edges"] is not None:
             for team in data["organization"]["team"]["members"]["edges"]:
