@@ -22,7 +22,6 @@ def print_stack_trace(message):
         del exc_info
 
 
-
 def team_user_names_query(after_cursor=None, team_name=None) -> DocumentNode:
     """A GraphQL query to get the list of user names within each organisation team.
 
@@ -204,7 +203,8 @@ def fetch_team_repos(github_service: GithubService, team_name) -> list:
     team_repo_list = []
 
     while has_next_page:
-        data = github_service.get_paginated_list_of_team_repositories(team_name, after_cursor)
+        data = github_service.get_paginated_list_of_team_repositories(
+            team_name, after_cursor)
 
         # Retrieve the name of the teams repos
         if data["organization"]["team"]["repositories"]["edges"] is not None:

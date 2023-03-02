@@ -513,7 +513,8 @@ class TestGithubServiceGetPaginatedListOfTeamNames(unittest.TestCase):
 class TestGithubServiceGetPaginatedListOfTeamRepositories(unittest.TestCase):
     def test_calls_downstream_services(self):
         github_service = GithubService("", ORGANISATION_NAME)
-        github_service.get_paginated_list_of_team_repositories("test_team_name", "test_after_cursor")
+        github_service.get_paginated_list_of_team_repositories(
+            "test_team_name", "test_after_cursor")
         github_service.github_client_gql_api.execute.assert_called_once()
 
     def test_throws_value_error_when_page_size_greater_than_limit(self):
