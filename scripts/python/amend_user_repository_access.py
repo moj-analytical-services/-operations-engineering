@@ -2,9 +2,6 @@ import logging
 import sys
 import traceback
 
-from gql import gql
-from graphql import DocumentNode
-
 from services.GithubService import GithubService
 
 
@@ -21,45 +18,6 @@ def print_stack_trace(message):
         traceback.print_exception(*exc_info)
         del exc_info
 
-
-def team_user_names_query(after_cursor=None, team_name=None) -> DocumentNode:
-    """A GraphQL query to get the list of user names within each organisation team.
-
-    Args:
-        after_cursor (string, optional): Is the pagination offset value gathered from the previous API request. Defaults to None.
-        team_name (string, optional): Is the name of the team that has the associated user/s. Defaults to None.
-
-    Returns:
-        gql: The GraphQL query result
-    """
-    query = """
-    query {
-        organization(login: "moj-analytical-services") {
-            team(slug: TEAM_NAME) {
-                members(first: 100, after:AFTER) {
-                    edges {
-                        node {
-                            login
-                        }
-                    }
-                    pageInfo {
-                        hasNextPage
-                        endCursor
-                    }
-                }
-            }
-        }
-    }
-    """.replace(
-        # This is the next page ID to start the fetch from
-        "AFTER",
-        '"{}"'.format(after_cursor) if after_cursor else "null",
-    ).replace(
-        "TEAM_NAME",
-        '"{}"'.format(team_name) if team_name else "null",
-    )
-
-    return gql(query)
 
 
 def fetch_repo_names(github_service: GithubService, repo_issues_enabled) -> list:
@@ -168,23 +126,18 @@ def fetch_team_users(github_service: GithubService, team_name) -> list:
     team_user_name_list = []
 
     while has_next_page:
-        query = team_user_names_query(after_cursor, team_name)
-        try:
-            data = github_service.github_client_gql_api.execute(query)
-        except Exception as err:
-            print("Exception in fetch_team_users()")
-            print(err)
-        else:
-            # Retrieve the usernames of the team members
-            if data["organization"]["team"]["members"]["edges"] is not None:
-                for team in data["organization"]["team"]["members"]["edges"]:
-                    team_user_name_list.append(team["node"]["login"])
+        data = github_service.get_paginated_list_of_team_user_names(team_name, after_cursor)
+ 
+        # Retrieve the usernames of the team members
+        if data["organization"]["team"]["members"]["edges"] is not None:
+            for team in data["organization"]["team"]["members"]["edges"]:
+                team_user_name_list.append(team["node"]["login"])
 
-            # Read the GH API page info section to see if there is more data to read
-            has_next_page = data["organization"]["team"]["members"]["pageInfo"][
-                "hasNextPage"
-            ]
-            after_cursor = data["organization"]["team"]["members"]["pageInfo"]["endCursor"]
+        # Read the GH API page info section to see if there is more data to read
+        has_next_page = data["organization"]["team"]["members"]["pageInfo"][
+            "hasNextPage"
+        ]
+        after_cursor = data["organization"]["team"]["members"]["pageInfo"]["endCursor"]
 
     return team_user_name_list
 
