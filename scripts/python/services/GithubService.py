@@ -296,3 +296,36 @@ class GithubService:
             "page_size": page_size,
             "after_cursor": after_cursor
         })
+
+    def get_paginated_list_of_team_user_names(self, team_name: str, after_cursor: str | None,
+                                              page_size: int = 100) -> dict[str, Any]:
+
+        logging.info(
+            f"Getting paginated list of team repos. Page size {page_size}, after cursor {bool(after_cursor)}")
+        if page_size > self.GITHUB_GQL_MAX_PAGE_SIZE:
+            raise ValueError(
+                f"Page size of {page_size} is too large. Max page size {self.GITHUB_GQL_MAX_PAGE_SIZE}")
+        return self.github_client_gql_api.execute(gql("""
+        query($organisation_name: String!, $team_name: String!, $page_size: Int!, $after_cursor: String) {
+            organization(login: $organisation_name) {
+                team(slug: $team_name) {
+                    members(first: $page_size, after: $after_cursor) {
+                        edges {
+                            node {
+                                login
+                            }
+                        }
+                        pageInfo {
+                            hasNextPage
+                            endCursor
+                        }
+                    }
+                }
+            }
+        }
+        """), variable_values={
+            "organisation_name": self.organisation_name,
+            "team_name": team_name,
+            "page_size": page_size,
+            "after_cursor": after_cursor
+        })
