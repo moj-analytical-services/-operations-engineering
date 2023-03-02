@@ -22,46 +22,6 @@ def print_stack_trace(message):
         del exc_info
 
 
-def team_repos_query(after_cursor=None, team_name=None) -> DocumentNode:
-    """A GraphQL query to get the list of repos a team has access to in the organisation
-
-    Args:
-        after_cursor (string, optional): Is the pagination offset value gathered from the previous API request. Defaults to None.
-        team_name (string, optional): Is the name of the team that has the associated repo/s. Defaults to None.
-
-    Returns:
-        gql: The GraphQL query result
-    """
-    query = """
-    query {
-        organization(login: "moj-analytical-services") {
-            team(slug: TEAM_NAME) {
-                repositories(first: 100, after:AFTER) {
-                    edges {
-                        node {
-                            name
-                        }
-                    }
-                    pageInfo {
-                        endCursor
-                        hasNextPage
-                    }
-                }
-            }
-        }
-    }
-    """.replace(
-        # This is the next page ID to start the fetch from
-        "AFTER",
-        '"{}"'.format(after_cursor) if after_cursor else "null",
-    ).replace(
-        "TEAM_NAME",
-        '"{}"'.format(team_name) if team_name else "null",
-    )
-
-    return gql(query)
-
-
 def team_user_names_query(after_cursor=None, team_name=None) -> DocumentNode:
     """A GraphQL query to get the list of user names within each organisation team.
 
@@ -243,25 +203,21 @@ def fetch_team_repos(github_service: GithubService, team_name) -> list:
     team_repo_list = []
 
     while has_next_page:
-        query = team_repos_query(after_cursor, team_name)
-        try:
-            data = github_service.github_client_gql_api.execute(query)
-        except Exception as err:
-            print("Exception in fetch_team_repos()")
-            print(err)
-        else:
-            # Retrieve the name of the teams repos
-            if data["organization"]["team"]["repositories"]["edges"] is not None:
-                for team in data["organization"]["team"]["repositories"]["edges"]:
-                    team_repo_list.append(team["node"]["name"])
+        data = github_service.get_paginated_list_of_team_repositories(
+            team_name, after_cursor)
 
-            # Read the GH API page info section to see if there is more data to read
-            has_next_page = data["organization"]["team"]["repositories"]["pageInfo"][
-                "hasNextPage"
-            ]
-            after_cursor = data["organization"]["team"]["repositories"]["pageInfo"][
-                "endCursor"
-            ]
+        # Retrieve the name of the teams repos
+        if data["organization"]["team"]["repositories"]["edges"] is not None:
+            for team in data["organization"]["team"]["repositories"]["edges"]:
+                team_repo_list.append(team["node"]["name"])
+
+        # Read the GH API page info section to see if there is more data to read
+        has_next_page = data["organization"]["team"]["repositories"]["pageInfo"][
+            "hasNextPage"
+        ]
+        after_cursor = data["organization"]["team"]["repositories"]["pageInfo"][
+            "endCursor"
+        ]
 
     return team_repo_list
 
