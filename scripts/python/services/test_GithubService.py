@@ -6,6 +6,7 @@ from freezegun import freeze_time
 from github import Github, RateLimitExceededException
 from github.NamedUser import NamedUser
 from github.Team import Team
+from gql.transport.exceptions import TransportQueryError
 
 from .GithubService import GithubService, retries_github_rate_limit_exception_at_next_reset_once
 
@@ -49,6 +50,34 @@ class TestRetriesGithubRateLimitExceptionAtNextResetOnce(unittest.TestCase):
         mock_github_service = Mock(
             GithubService, github_client_core_api=mock_github_client)
         self.assertRaises(RateLimitExceededException,
+                          retries_github_rate_limit_exception_at_next_reset_once(
+                              mock_function), mock_github_service,
+                          "test_arg")
+
+    @freeze_time("2023-02-01")
+    def test_function_is_called_twice_when_transport_query_error_raised_once(self):
+        mock_function = Mock(
+            side_effect=[TransportQueryError(Mock(), Mock(), Mock()), Mock()])
+        mock_github_client = Mock(Github)
+        mock_github_client.get_rate_limit().graphql.reset = datetime.now()
+        mock_github_service = Mock(
+            GithubService, github_client_core_api=mock_github_client)
+        retries_github_rate_limit_exception_at_next_reset_once(
+            mock_function)(mock_github_service, "test_arg")
+        mock_function.assert_has_calls([call(mock_github_service, 'test_arg')], [
+            call(mock_github_service, 'test_arg')])
+
+    @freeze_time("2023-02-01")
+    def test_rate_limit_exception_raised_when_transport_query_error_raised_twice(self):
+        mock_function = Mock(side_effect=[
+            TransportQueryError(Mock(), Mock(), Mock()),
+            TransportQueryError(Mock(), Mock(), Mock())]
+        )
+        mock_github_client = Mock(Github)
+        mock_github_client.get_rate_limit().graphql.reset = datetime.now()
+        mock_github_service = Mock(
+            GithubService, github_client_core_api=mock_github_client)
+        self.assertRaises(TransportQueryError,
                           retries_github_rate_limit_exception_at_next_reset_once(
                               mock_function), mock_github_service,
                           "test_arg")
@@ -473,6 +502,72 @@ class TestGithubServiceGetPaginatedListOfRepositories(unittest.TestCase):
         github_service = GithubService("", ORGANISATION_NAME)
         self.assertRaises(
             ValueError, github_service.get_paginated_list_of_repositories, "test_after_cursor", 101)
+
+
+@patch("gql.transport.aiohttp.AIOHTTPTransport.__new__", new=MagicMock)
+@patch("gql.Client.__new__", new=MagicMock)
+@patch("github.Github.__new__", new=MagicMock)
+class TestGithubServiceGetPaginatedListOfUserNamesWithDirectAccessToRepository(unittest.TestCase):
+    def test_calls_downstream_services(self):
+        github_service = GithubService("", ORGANISATION_NAME)
+        github_service.get_paginated_list_of_user_names_with_direct_access_to_repository("test_repository_name",
+                                                                                         "test_after_cursor")
+        github_service.github_client_gql_api.execute.assert_called_once()
+
+    def test_throws_value_error_when_page_size_greater_than_limit(self):
+        github_service = GithubService("", ORGANISATION_NAME)
+        self.assertRaises(
+            ValueError, github_service.get_paginated_list_of_user_names_with_direct_access_to_repository,
+            "test_repository_name", "test_after_cursor", 101)
+
+
+@patch("gql.transport.aiohttp.AIOHTTPTransport.__new__", new=MagicMock)
+@patch("gql.Client.__new__", new=MagicMock)
+@patch("github.Github.__new__", new=MagicMock)
+class TestGithubServiceGetPaginatedListOfTeamNames(unittest.TestCase):
+    def test_calls_downstream_services(self):
+        github_service = GithubService("", ORGANISATION_NAME)
+        github_service.get_paginated_list_of_team_names("test_after_cursor")
+        github_service.github_client_gql_api.execute.assert_called_once()
+
+    def test_throws_value_error_when_page_size_greater_than_limit(self):
+        github_service = GithubService("", ORGANISATION_NAME)
+        self.assertRaises(
+            ValueError, github_service.get_paginated_list_of_team_names, "test_after_cursor", 101)
+
+
+@patch("gql.transport.aiohttp.AIOHTTPTransport.__new__", new=MagicMock)
+@patch("gql.Client.__new__", new=MagicMock)
+@patch("github.Github.__new__", new=MagicMock)
+class TestGithubServiceGetPaginatedListOfTeamRepositories(unittest.TestCase):
+    def test_calls_downstream_services(self):
+        github_service = GithubService("", ORGANISATION_NAME)
+        github_service.get_paginated_list_of_team_repositories(
+            "test_team_name", "test_after_cursor")
+        github_service.github_client_gql_api.execute.assert_called_once()
+
+    def test_throws_value_error_when_page_size_greater_than_limit(self):
+        github_service = GithubService("", ORGANISATION_NAME)
+        self.assertRaises(
+            ValueError, github_service.get_paginated_list_of_team_repositories, "test_team_name", "test_after_cursor",
+            101)
+
+
+@patch("gql.transport.aiohttp.AIOHTTPTransport.__new__", new=MagicMock)
+@patch("gql.Client.__new__", new=MagicMock)
+@patch("github.Github.__new__", new=MagicMock)
+class TestGithubServiceGetPaginatedListOfUserNames(unittest.TestCase):
+    def test_calls_downstream_services(self):
+        github_service = GithubService("", ORGANISATION_NAME)
+        github_service.get_paginated_list_of_team_user_names(
+            "test_team_name", "test_after_cursor")
+        github_service.github_client_gql_api.execute.assert_called_once()
+
+    def test_throws_value_error_when_page_size_greater_than_limit(self):
+        github_service = GithubService("", ORGANISATION_NAME)
+        self.assertRaises(
+            ValueError, github_service.get_paginated_list_of_team_user_names, "test_team_name", "test_after_cursor",
+            101)
 
 
 if __name__ == "__main__":

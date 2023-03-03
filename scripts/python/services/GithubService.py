@@ -9,6 +9,7 @@ from github import Github, RateLimitExceededException
 from github.Issue import Issue
 from gql import Client, gql
 from gql.transport.aiohttp import AIOHTTPTransport
+from gql.transport.exceptions import TransportQueryError
 
 
 def retries_github_rate_limit_exception_at_next_reset_once(func: Callable) -> Callable:
@@ -25,17 +26,20 @@ def retries_github_rate_limit_exception_at_next_reset_once(func: Callable) -> Ca
             - Deleting data
             - Updating data
         """
-        github_client_core_api = args[0].github_client_core_api
         try:
             return func(*args, **kwargs)
-        except RateLimitExceededException:
+        except (RateLimitExceededException, TransportQueryError) as exception:
             logging.warning(
-                "Caught RateLimitExceededException, retrying calls when rate limit resets.")
-            core_api_reset_timestamp = timegm(
-                github_client_core_api.get_rate_limit().core.reset.timetuple())
+                f"Caught {type(exception).__name__}, retrying calls when rate limit resets.")
+            rate_limits = args[0].github_client_core_api.get_rate_limit()
+            rate_limit_to_use = rate_limits.core if type(
+                exception) is RateLimitExceededException else rate_limits.graphql
+
+            reset_timestamp = timegm(rate_limit_to_use.reset.timetuple())
             now_timestamp = timegm(gmtime())
             time_until_core_api_rate_limit_resets = (
-                core_api_reset_timestamp - now_timestamp) if core_api_reset_timestamp > now_timestamp else 0
+                reset_timestamp - now_timestamp) if reset_timestamp > now_timestamp else 0
+
             sleep(time_until_core_api_rate_limit_resets)
             return func(*args, **kwargs)
 
@@ -45,6 +49,7 @@ def retries_github_rate_limit_exception_at_next_reset_once(func: Callable) -> Ca
 class GithubService:
     USER_ACCESS_REMOVED_ISSUE_TITLE: str = "User access removed, access is now via a team"
     GITHUB_GQL_MAX_PAGE_SIZE = 100
+    GITHUB_GQL_DEFAULT_PAGE_SIZE = 10
 
     def __init__(self, org_token: str, organisation_name: str) -> None:
         self.github_client_core_api: Github = Github(org_token)
@@ -162,6 +167,7 @@ class GithubService:
         self.github_client_core_api.get_organization(self.organisation_name).get_team(
             team_id).update_team_repository(repo, permission)
 
+    @retries_github_rate_limit_exception_at_next_reset_once
     def get_team_id_from_team_name(self, team_name: str) -> int | TypeError:
         logging.info(f"Getting team ID for team name {team_name}")
         data = self.github_client_gql_api.execute(gql("""
@@ -176,7 +182,9 @@ class GithubService:
 
         return data["organization"]["team"]["databaseId"]
 
-    def get_paginated_list_of_repositories(self, after_cursor: str | None, page_size: int = 100) -> dict[str, Any]:
+    @retries_github_rate_limit_exception_at_next_reset_once
+    def get_paginated_list_of_repositories(self, after_cursor: str | None,
+                                           page_size: int = GITHUB_GQL_DEFAULT_PAGE_SIZE) -> dict[str, Any]:
         logging.info(
             f"Getting paginated list of repositories. Page size {page_size}, after cursor {bool(after_cursor)}")
         if page_size > self.GITHUB_GQL_MAX_PAGE_SIZE:
@@ -204,3 +212,134 @@ class GithubService:
             }
         """), variable_values={"organisation_name": self.organisation_name, "page_size": page_size,
                                "after_cursor": after_cursor})
+
+    @retries_github_rate_limit_exception_at_next_reset_once
+    def get_paginated_list_of_user_names_with_direct_access_to_repository(self, repository_name: str,
+                                                                          after_cursor: str | None,
+                                                                          page_size: int = GITHUB_GQL_DEFAULT_PAGE_SIZE) -> \
+            dict[str, Any]:
+        logging.info(
+            f"Getting paginated list of user names with direct access to repository {repository_name}. Page size {page_size}, after cursor {bool(after_cursor)}"
+        )
+        if page_size > self.GITHUB_GQL_MAX_PAGE_SIZE:
+            raise ValueError(
+                f"Page size of {page_size} is too large. Max page size {self.GITHUB_GQL_MAX_PAGE_SIZE}")
+        return self.github_client_gql_api.execute(gql("""
+            query($organisation_name: String!, $repository_name: String!, $page_size: Int!, $after_cursor: String) {
+                repository(name: $repository_name, owner: $organisation_name) {
+                    collaborators(first: $page_size, after:$after_cursor, affiliation: DIRECT) {
+                        edges {
+                            node {
+                                login
+                            }
+                        }
+                        pageInfo {
+                            hasNextPage
+                            endCursor
+                        }
+                    }
+                }
+            }
+        """), variable_values={
+            "repository_name": repository_name,
+            "organisation_name": self.organisation_name,
+            "page_size": page_size,
+            "after_cursor": after_cursor
+        })
+
+    @retries_github_rate_limit_exception_at_next_reset_once
+    def get_paginated_list_of_team_names(self, after_cursor: str | None,
+                                         page_size: int = GITHUB_GQL_DEFAULT_PAGE_SIZE) -> dict[str, Any]:
+        logging.info(
+            f"Getting paginated list of team names. Page size {page_size}, after cursor {bool(after_cursor)}")
+        if page_size > self.GITHUB_GQL_MAX_PAGE_SIZE:
+            raise ValueError(
+                f"Page size of {page_size} is too large. Max page size {self.GITHUB_GQL_MAX_PAGE_SIZE}")
+        return self.github_client_gql_api.execute(gql("""
+            query($organisation_name: String!, $page_size: Int!, $after_cursor: String) {
+                organization(login: $organisation_name) {
+                    teams(first: $page_size, after:$after_cursor) {
+                        pageInfo {
+                            endCursor
+                            hasNextPage
+                        }
+                        edges {
+                            node {
+                                slug
+                            }
+                        }
+                    }
+                }
+            }
+        """), variable_values={
+            "organisation_name": self.organisation_name,
+            "page_size": page_size,
+            "after_cursor": after_cursor
+        })
+
+    @retries_github_rate_limit_exception_at_next_reset_once
+    def get_paginated_list_of_team_repositories(self, team_name: str, after_cursor: str | None,
+                                                page_size: int = GITHUB_GQL_DEFAULT_PAGE_SIZE) -> dict[str, Any]:
+        logging.info(
+            f"Getting paginated list of team repos. Page size {page_size}, after cursor {bool(after_cursor)}")
+        if page_size > self.GITHUB_GQL_MAX_PAGE_SIZE:
+            raise ValueError(
+                f"Page size of {page_size} is too large. Max page size {self.GITHUB_GQL_MAX_PAGE_SIZE}")
+        return self.github_client_gql_api.execute(gql("""
+        query($organisation_name: String!, $team_name: String!, $page_size: Int!, $after_cursor: String) {
+            organization(login: $organisation_name) {
+                team(slug: $team_name) {
+                    repositories(first: $page_size, after:$after_cursor) {
+                        edges {
+                            node {
+                                name
+                            }
+                        }
+                        pageInfo {
+                            endCursor
+                            hasNextPage
+                        }
+                    }
+                }
+            }
+        }
+        """), variable_values={
+            "organisation_name": self.organisation_name,
+            "team_name": team_name,
+            "page_size": page_size,
+            "after_cursor": after_cursor
+        })
+
+    @retries_github_rate_limit_exception_at_next_reset_once
+    def get_paginated_list_of_team_user_names(self, team_name: str, after_cursor: str | None,
+                                              page_size: int = GITHUB_GQL_DEFAULT_PAGE_SIZE) -> dict[str, Any]:
+
+        logging.info(
+            f"Getting paginated list of team repos. Page size {page_size}, after cursor {bool(after_cursor)}")
+        if page_size > self.GITHUB_GQL_MAX_PAGE_SIZE:
+            raise ValueError(
+                f"Page size of {page_size} is too large. Max page size {self.GITHUB_GQL_MAX_PAGE_SIZE}")
+        return self.github_client_gql_api.execute(gql("""
+        query($organisation_name: String!, $team_name: String!, $page_size: Int!, $after_cursor: String) {
+            organization(login: $organisation_name) {
+                team(slug: $team_name) {
+                    members(first: $page_size, after: $after_cursor) {
+                        edges {
+                            node {
+                                login
+                            }
+                        }
+                        pageInfo {
+                            hasNextPage
+                            endCursor
+                        }
+                    }
+                }
+            }
+        }
+        """), variable_values={
+            "organisation_name": self.organisation_name,
+            "team_name": team_name,
+            "page_size": page_size,
+            "after_cursor": after_cursor
+        })
