@@ -56,7 +56,7 @@ class GithubService:
         self.github_client_gql_api: Client = Client(transport=AIOHTTPTransport(
             url="https://api.github.com/graphql",
             headers={"Authorization": f"Bearer {org_token}"},
-        ), fetch_schema_from_transport=False)
+        ), execute_timeout=60)
         self.organisation_name: str = organisation_name
 
     @retries_github_rate_limit_exception_at_next_reset_once
