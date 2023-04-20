@@ -2,9 +2,9 @@ name: Amend users access to a repository
 
 on:
   workflow_dispatch:
-  schedule:
-    # At the end of every day
-    - cron: "0 6 * * 1-5"
+#   schedule:
+#     # At the end of every day
+#     - cron: "0 6 * * 1-5"
 
 jobs:
   remove-duplicated-access:
