@@ -1,8 +1,6 @@
 name: Add org members to team
 on:
   workflow_dispatch:
-  schedule:
-    - cron: "0 8,10,12,14,16 * * 1-5"
 
 jobs:
   run-script:
