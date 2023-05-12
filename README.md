@@ -1,6 +1,4 @@
-# Ministry of Justice Analytical-Services Operations Engineering Main Repo
+# ❗ Archived Repository ❗
 
-## About this Repository
-
-This is the MoJ Analytical-Services Operations Engineering team's repository for automation, public facing documentation, feature work, enhancements, and issues.
-
+This repository has been archived. All functionality has been migrated to
+the [ministryofjustice/operations-engineering](https://github.com/ministryofjustice/operations-engineering) repository.
